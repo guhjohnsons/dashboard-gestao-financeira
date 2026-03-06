@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Dashboard de Gastos Mensais - Controle suas finanças pessoais com gráficos interativos e categorias detalhadas">
+    <title>Dashboard de Gastos</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Sidebar Overlay (Mobile) -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <i class="ri-money-dollar-circle-line"></i>
+                </div>
+                <div class="sidebar-brand">
+                    <h1>Gestão Financeira</h1>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <span class="nav-section-label">Menu Principal</span>
+                <button class="nav-item active" data-page="dashboard" id="nav-dashboard">
+                    <i class="ri-dashboard-3-line"></i>
+                    Dashboard
+                </button>
+                <button class="nav-item" data-page="transactions" id="nav-transactions">
+                    <i class="ri-exchange-funds-line"></i>
+                    Transações
+                </button>
+                <button class="nav-item" data-page="add-expense" id="nav-add-expense">
+                    <i class="ri-add-circle-line"></i>
+                    Novo Registro
+                </button>
+                <button class="nav-item" data-page="categories" id="nav-categories">
+                    <i class="ri-folder-chart-line"></i>
+                    Categorias
+                </button>
+
+                <span class="nav-section-label">Análises</span>
+                <button class="nav-item" data-page="reports" id="nav-reports">
+                    <i class="ri-bar-chart-2-line"></i>
+                    Relatórios
+                </button>
+                <span class="nav-section-label">Configurações</span>
+                <button class="nav-item" data-page="settings" id="nav-settings">
+                    <i class="ri-settings-4-line"></i>
+                    Backup e Ajuda
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="theme-toggle-wrapper" id="themeToggle">
+                    <i class="ri-moon-line" id="themeIcon"></i>
+                    <span id="themeLabel">Modo Escuro</span>
+                    <div class="theme-switch"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="main-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <button class="btn-mobile-menu" id="btnMobileMenu">
+                        <i class="ri-menu-line"></i>
+                    </button>
+                    <div class="header-left">
+                        <h2 id="pageTitle">Dashboard</h2>
+                        <p id="pageSubtitle">Visão geral das suas finanças</p>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="period-toggle">
+                        <button class="period-btn active" id="viewMonth" type="button">Mês</button>
+                        <button class="period-btn" id="viewYear" type="button">Ano</button>
+                    </div>
+                    <div class="month-selector">
+                        <button id="prevMonth" type="button" aria-label="Período anterior">
+                            <i class="ri-arrow-left-s-line"></i>
+                        </button>
+                        <span id="currentMonth">Março 2026</span>
+                        <button id="nextMonth" type="button" aria-label="Próximo período">
+                            <i class="ri-arrow-right-s-line"></i>
+                        </button>
+                    </div>
+                    <button class="btn btn-primary" id="btnAddNew" type="button">
+                        <i class="ri-add-line"></i>
+                        <span class="btn-text-desktop">Adicionar</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- ===== DASHBOARD PAGE ===== -->
+                <section class="page-section active" id="page-dashboard">
+                    <!-- Summary Cards -->
+                    <div class="summary-cards">
+                        <div class="summary-card total">
+                            <div class="card-header">
+                                <span>Total Registros</span>
+                                <div class="card-icon"><i class="ri-file-list-3-line"></i></div>
+                            </div>
+                            <div class="card-value" id="totalRecords">0</div>
+                            <div class="card-comparison">
+                                <span id="periodLabel">transações este mês</span>
+                            </div>
+                        </div>
+                        <div class="summary-card income">
+                            <div class="card-header">
+                                <span>Receitas</span>
+                                <div class="card-icon"><i class="ri-arrow-up-circle-line"></i></div>
+                            </div>
+                            <div class="card-value" id="totalIncome">R$ 0,00</div>
+                            <div class="card-comparison">
+                                <i class="ri-arrow-up-s-fill up"></i>
+                                <span class="up" id="incomeChange">+0%</span>
+                            </div>
+                        </div>
+                        <div class="summary-card expense">
+                            <div class="card-header">
+                                <span>Despesas</span>
+                                <div class="card-icon"><i class="ri-arrow-down-circle-line"></i></div>
+                            </div>
+                            <div class="card-value" id="totalExpense">R$ 0,00</div>
+                            <div class="card-comparison">
+                                <i class="ri-arrow-down-s-fill down"></i>
+                                <span class="down" id="expenseChange">-0%</span>
+                            </div>
+                        </div>
+                        <div class="summary-card balance">
+                            <div class="card-header">
+                                <span>Saldo</span>
+                                <div class="card-icon"><i class="ri-scales-3-line"></i></div>
+                            </div>
+                            <div class="card-value" id="totalBalance">R$ 0,00</div>
+                            <div class="card-comparison">
+                                <span>balanço do mês</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="charts-grid">
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <h3 id="dailyChartTitle">Despesas Diárias</h3>
+                                <span class="badge" id="dailyChartBadge">Últimos 30 dias</span>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="dailyChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <h3>Por Categoria</h3>
+                                <span class="badge">Distribuição</span>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Transactions -->
+                    <div class="transactions-section">
+                        <div class="transactions-header">
+                            <h3>Transações Recentes</h3>
+                            <button class="btn btn-secondary" onclick="navigateTo('transactions')">
+                                Ver todas <i class="ri-arrow-right-line"></i>
+                            </button>
+                        </div>
+                        <div class="transactions-list" id="recentTransactions">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ===== TRANSACTIONS PAGE ===== -->
+                <section class="page-section" id="page-transactions">
+                    <div class="transactions-section">
+                        <div class="transactions-header">
+                            <h3>Todas as Transações</h3>
+                            <div class="transactions-filters">
+                                <button class="filter-chip active" data-filter="all">Todas</button>
+                                <button class="filter-chip" data-filter="expense">Despesas</button>
+                                <button class="filter-chip" data-filter="income">Receitas</button>
+                            </div>
+                        </div>
+                        <div class="transactions-list" id="allTransactions">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ===== ADD EXPENSE PAGE ===== -->
+                <section class="page-section" id="page-add-expense">
+                    <div class="add-expense-card">
+                        <h3><i class="ri-add-circle-line"></i> Novo Registro</h3>
+                        <form id="expenseFormPage">
+                            <div class="form-group">
+                                <label for="pageType">Tipo</label>
+                                <div class="type-toggle">
+                                    <button type="button" class="type-btn expense-type active" data-type="expense"
+                                        id="pageTypeExpense">
+                                        <i class="ri-arrow-down-circle-line"></i> Despesa
+                                    </button>
+                                    <button type="button" class="type-btn income-type" data-type="income"
+                                        id="pageTypeIncome">
+                                        <i class="ri-arrow-up-circle-line"></i> Receita
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="pageName">Descrição</label>
+                                <input type="text" class="form-control" id="pageName"
+                                    placeholder="Ex: Supermercado, Salário..." required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="pageAmount">Valor (R$)</label>
+                                    <input type="number" class="form-control" id="pageAmount" placeholder="0,00"
+                                        step="0.01" min="0.01" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="pageDate">Data</label>
+                                    <input type="date" class="form-control" id="pageDate" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="pageCategory">Categoria</label>
+                                <select class="form-control" id="pageCategory" required>
+                                    <option value="">Selecione uma categoria</option>
+                                    <option value="food">🍔 Alimentação</option>
+                                    <option value="transport">🚗 Transporte</option>
+                                    <option value="housing">🏠 Moradia</option>
+                                    <option value="health">💊 Saúde</option>
+                                    <option value="education">📚 Educação</option>
+                                    <option value="entertainment">🎮 Lazer</option>
+                                    <option value="shopping">🛍️ Compras</option>
+                                    <option value="bills">📄 Contas</option>
+                                    <option value="salary">💰 Salário</option>
+                                    <option value="freelance">💼 Freelance</option>
+                                    <option value="investment">📈 Investimentos</option>
+                                    <option value="others">📦 Outros</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="pageNotes">Observações (opcional)</label>
+                                <input type="text" class="form-control" id="pageNotes"
+                                    placeholder="Notas adicionais...">
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">
+                                <i class="ri-save-line"></i> Salvar Registro
+                            </button>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- ===== CATEGORIES PAGE ===== -->
+                <section class="page-section" id="page-categories">
+                    <div class="categories-grid" id="categoriesGrid">
+                        <!-- Populated by JS -->
+                    </div>
+                </section>
+
+                <!-- ===== REPORTS PAGE ===== -->
+                <section class="page-section" id="page-reports">
+                    <div class="stats-mini-grid">
+                        <div class="stat-mini-card">
+                            <i class="ri-calendar-check-line" style="color: var(--accent-primary);"></i>
+                            <div class="stat-value" id="avgDaily">R$ 0,00</div>
+                            <div class="stat-label">Média Diária</div>
+                        </div>
+                        <div class="stat-mini-card">
+                            <i class="ri-fire-line" style="color: var(--color-expense);"></i>
+                            <div class="stat-value" id="biggestExpense">R$ 0,00</div>
+                            <div class="stat-label">Maior Despesa</div>
+                        </div>
+                        <div class="stat-mini-card">
+                            <i class="ri-trophy-line" style="color: var(--color-warning);"></i>
+                            <div class="stat-value" id="topCategory">-</div>
+                            <div class="stat-label">Top Categoria</div>
+                        </div>
+                    </div>
+
+                    <div class="charts-grid">
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <h3>Receita vs Despesa</h3>
+                                <span class="badge">Comparativo</span>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="comparisonChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <h3>Evolução Mensal</h3>
+                                <span class="badge">Tendência</span>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="trendChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Budget Progress -->
+                    <div class="budget-section">
+                        <div class="budget-header">
+                            <h3>Orçamento por Categoria</h3>
+                        </div>
+                        <div id="budgetList">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </section>
+                <!-- ===== SETTINGS / BACKUP PAGE ===== -->
+                <section class="page-section" id="page-settings">
+                    <div class="settings-section" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h3
+                            style="margin-bottom: 24px; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                            <i class="ri-database-2-line"></i> Gerenciamento de Dados
+                        </h3>
+
+                        <div class="card"
+                            style="background: var(--bg-surface); border-radius: 16px; padding: 24px; box-shadow: var(--shadow-sm); margin-bottom: 24px; border: 1px solid var(--border-color);">
+                            <h4
+                                style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: var(--text-primary);">
+                                <i class="ri-download-cloud-2-line"
+                                    style="color: var(--accent-primary); font-size: 20px;"></i>
+                                Exportar Dados
+                            </h4>
+                            <p style="color: var(--text-muted); margin-bottom: 16px; font-size: 14px;">
+                                Salve um backup dos seus dados para não perdê-los ou exporte para abrir no Excel. O
+                                backup do JSON é o mais recomendado.
+                            </p>
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                                <button class="btn btn-secondary" id="btnExportJSON">
+                                    <i class="ri-braces-line"></i> Exportar JSON (Backup)
+                                </button>
+                                <button class="btn btn-secondary" id="btnExportCSV">
+                                    <i class="ri-file-excel-2-line"></i> Exportar CSV (Excel)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="card"
+                            style="background: var(--bg-surface); border-radius: 16px; padding: 24px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color);">
+                            <h4
+                                style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: var(--text-primary);">
+                                <i class="ri-upload-cloud-2-line"
+                                    style="color: var(--color-warning); font-size: 20px;"></i>
+                                Restaurar Backup
+                            </h4>
+                            <p style="color: var(--text-muted); margin-bottom: 16px; font-size: 14px;">
+                                Caso tenha perdido seus dados ou queira transferir para outro dispositivo, você pode
+                                restaurá-los usando o arquivo JSON de backup.
+                            </p>
+                            <input type="file" id="fileImportJSON" accept=".json" style="display: none;">
+                            <button class="btn" onclick="document.getElementById('fileImportJSON').click();"
+                                style="background-color: var(--color-warning); border-color: var(--color-warning); color: #fff; padding: 0.75rem 1.5rem; border-radius: 12px; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; cursor: pointer;">
+                                <i class="ri-history-line"></i> Restaurar do JSON
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button class="fab-button" id="fabButton" aria-label="Adicionar transação">
+        <i class="ri-add-line"></i>
+    </button>
+
+    <!-- Modal - Add/Edit Transaction -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Nova Transação</h3>
+                <button class="modal-close" id="modalClose"><i class="ri-close-line"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="expenseForm">
+                    <input type="hidden" id="editId">
+                    <div class="form-group">
+                        <label>Tipo</label>
+                        <div class="type-toggle">
+                            <button type="button" class="type-btn expense-type active" data-type="expense"
+                                id="modalTypeExpense">
+                                <i class="ri-arrow-down-circle-line"></i> Despesa
+                            </button>
+                            <button type="button" class="type-btn income-type" data-type="income" id="modalTypeIncome">
+                                <i class="ri-arrow-up-circle-line"></i> Receita
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="modalName">Descrição</label>
+                        <input type="text" class="form-control" id="modalName"
+                            placeholder="Ex: Supermercado, Salário..." required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="modalAmount">Valor (R$)</label>
+                            <input type="number" class="form-control" id="modalAmount" placeholder="0,00" step="0.01"
+                                min="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="modalDate">Data</label>
+                            <input type="date" class="form-control" id="modalDate" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="modalCategory">Categoria</label>
+                        <select class="form-control" id="modalCategory" required>
+                            <option value="">Selecione uma categoria</option>
+                            <option value="food">🍔 Alimentação</option>
+                            <option value="transport">🚗 Transporte</option>
+                            <option value="housing">🏠 Moradia</option>
+                            <option value="health">💊 Saúde</option>
+                            <option value="education">📚 Educação</option>
+                            <option value="entertainment">🎮 Lazer</option>
+                            <option value="shopping">🛍️ Compras</option>
+                            <option value="bills">📄 Contas</option>
+                            <option value="salary">💰 Salário</option>
+                            <option value="freelance">💼 Freelance</option>
+                            <option value="investment">📈 Investimentos</option>
+                            <option value="others">📦 Outros</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="modalNotes">Observações (opcional)</label>
+                        <input type="text" class="form-control" id="modalNotes" placeholder="Notas adicionais...">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modalCancel">Cancelar</button>
+                <button class="btn btn-primary" id="modalSave">
+                    <i class="ri-save-line"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div class="modal-overlay" id="confirmOverlay">
+        <div class="modal" style="max-width: 400px;">
+            <div class="modal-body" style="padding: 32px;">
+                <div class="confirm-dialog">
+                    <i class="ri-error-warning-line"></i>
+                    <h4>Excluir Transação</h4>
+                    <p>Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.</p>
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" id="confirmCancel">Cancelar</button>
+                        <button class="btn btn-danger" id="confirmDelete">
+                            <i class="ri-delete-bin-line"></i> Excluir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
