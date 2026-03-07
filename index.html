@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
         content="Dashboard de Gastos Mensais - Controle suas finanças pessoais com gráficos interativos e categorias detalhadas">
-    <title>Dashboard de Gastos</title>
+    <title>GestaoFinanceiraGu - Dashboard de Gastos</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -24,7 +24,7 @@
                     <i class="ri-money-dollar-circle-line"></i>
                 </div>
                 <div class="sidebar-brand">
-                    <h1>Gestão Financeira</h1>
+                    <h1>GestaoFinanceiraGu</h1>
                 </div>
             </div>
 
@@ -108,16 +108,6 @@
                 <section class="page-section active" id="page-dashboard">
                     <!-- Summary Cards -->
                     <div class="summary-cards">
-                        <div class="summary-card total">
-                            <div class="card-header">
-                                <span>Total Registros</span>
-                                <div class="card-icon"><i class="ri-file-list-3-line"></i></div>
-                            </div>
-                            <div class="card-value" id="totalRecords">0</div>
-                            <div class="card-comparison">
-                                <span id="periodLabel">transações este mês</span>
-                            </div>
-                        </div>
                         <div class="summary-card income">
                             <div class="card-header">
                                 <span>Receitas</span>
@@ -125,8 +115,7 @@
                             </div>
                             <div class="card-value" id="totalIncome">R$ 0,00</div>
                             <div class="card-comparison">
-                                <i class="ri-arrow-up-s-fill up"></i>
-                                <span class="up" id="incomeChange">+0%</span>
+                                <span id="periodLabel">entradas no período</span>
                             </div>
                         </div>
                         <div class="summary-card expense">
@@ -138,6 +127,26 @@
                             <div class="card-comparison">
                                 <i class="ri-arrow-down-s-fill down"></i>
                                 <span class="down" id="expenseChange">-0%</span>
+                            </div>
+                        </div>
+                        <div class="summary-card investment">
+                            <div class="card-header">
+                                <span>Investimentos</span>
+                                <div class="card-icon"><i class="ri-line-chart-line"></i></div>
+                            </div>
+                            <div class="card-value" id="totalInvestment">R$ 0,00</div>
+                            <div class="card-comparison">
+                                <span>aplicações no período</span>
+                            </div>
+                        </div>
+                        <div class="summary-card loan">
+                            <div class="card-header">
+                                <span>Empréstimos</span>
+                                <div class="card-icon"><i class="ri-hand-coin-line"></i></div>
+                            </div>
+                            <div class="card-value" id="totalLoan">R$ 0,00</div>
+                            <div class="card-comparison">
+                                <span>parcelas no período</span>
                             </div>
                         </div>
                         <div class="summary-card balance">
@@ -195,8 +204,10 @@
                             <h3>Todas as Transações</h3>
                             <div class="transactions-filters">
                                 <button class="filter-chip active" data-filter="all">Todas</button>
-                                <button class="filter-chip" data-filter="expense">Despesas</button>
                                 <button class="filter-chip" data-filter="income">Receitas</button>
+                                <button class="filter-chip" data-filter="expense">Despesas</button>
+                                <button class="filter-chip" data-filter="investment">Investimentos</button>
+                                <button class="filter-chip" data-filter="loan">Empréstimos</button>
                             </div>
                         </div>
                         <div class="transactions-list" id="allTransactions">
@@ -212,14 +223,18 @@
                         <form id="expenseFormPage">
                             <div class="form-group">
                                 <label for="pageType">Tipo</label>
-                                <div class="type-toggle">
-                                    <button type="button" class="type-btn expense-type active" data-type="expense"
-                                        id="pageTypeExpense">
+                                <div class="type-toggle type-toggle-four">
+                                    <button type="button" class="type-btn income-type" data-type="income" id="pageTypeIncome">
+                                        <i class="ri-arrow-up-circle-line"></i> Receita
+                                    </button>
+                                    <button type="button" class="type-btn investment-type" data-type="investment" id="pageTypeInvestment">
+                                        <i class="ri-line-chart-line"></i> Investimento
+                                    </button>
+                                    <button type="button" class="type-btn expense-type active" data-type="expense" id="pageTypeExpense">
                                         <i class="ri-arrow-down-circle-line"></i> Despesa
                                     </button>
-                                    <button type="button" class="type-btn income-type" data-type="income"
-                                        id="pageTypeIncome">
-                                        <i class="ri-arrow-up-circle-line"></i> Receita
+                                    <button type="button" class="type-btn loan-type" data-type="loan" id="pageTypeLoan">
+                                        <i class="ri-hand-coin-line"></i> Empréstimo
                                     </button>
                                 </div>
                             </div>
@@ -243,19 +258,17 @@
                                 <label for="pageCategory">Categoria</label>
                                 <select class="form-control" id="pageCategory" required>
                                     <option value="">Selecione uma categoria</option>
-                                    <option value="food">🍔 Alimentação</option>
-                                    <option value="transport">🚗 Transporte</option>
-                                    <option value="housing">🏠 Moradia</option>
-                                    <option value="health">💊 Saúde</option>
-                                    <option value="education">📚 Educação</option>
-                                    <option value="entertainment">🎮 Lazer</option>
-                                    <option value="shopping">🛍️ Compras</option>
-                                    <option value="bills">📄 Contas</option>
-                                    <option value="salary">💰 Salário</option>
-                                    <option value="freelance">💼 Freelance</option>
-                                    <option value="investment">📈 Investimentos</option>
-                                    <option value="others">📦 Outros</option>
                                 </select>
+                                <div class="form-group" id="pageNovaCategoriaWrap" style="display: none; margin-top: 8px;">
+                                    <label for="pageNovaCategoriaNome">Nome da nova categoria</label>
+                                    <input type="text" class="form-control" id="pageNovaCategoriaNome" placeholder="Ex: Academia, Streaming...">
+                                </div>
+                                <div class="form-group" id="pageParcelasWrap" style="display: none; margin-top: 8px;">
+                                    <label for="pageParcelasTotal">Quantidade de parcelas</label>
+                                    <input type="number" class="form-control" id="pageParcelasTotal" placeholder="Ex: 12" min="1" max="999">
+                                    <label for="pageParcelaAtual" style="margin-top: 6px;">Parcela atual (opcional)</label>
+                                    <input type="number" class="form-control" id="pageParcelaAtual" placeholder="Ex: 1" min="1" max="999">
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label for="pageNotes">Observações (opcional)</label>
@@ -375,6 +388,22 @@
                                 <i class="ri-history-line"></i> Restaurar do JSON
                             </button>
                         </div>
+
+                        <div class="card"
+                            style="background: var(--bg-surface); border-radius: 16px; padding: 24px; box-shadow: var(--shadow-sm); margin-bottom: 24px; border: 1px solid var(--border-color);">
+                            <h4
+                                style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: var(--text-primary);">
+                                <i class="ri-delete-bin-6-line"
+                                    style="color: var(--color-danger); font-size: 20px;"></i>
+                                Limpar Todas as Informações
+                            </h4>
+                            <p style="color: var(--text-muted); margin-bottom: 16px; font-size: 14px;">
+                                Esta ação irá remover permanentemente todas as transações, categorias personalizadas e configurações. Esta ação não pode ser desfeita.
+                            </p>
+                            <button class="btn btn-danger" id="btnClearAllData">
+                                <i class="ri-delete-bin-line"></i> Limpar Tudo
+                            </button>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -398,13 +427,18 @@
                     <input type="hidden" id="editId">
                     <div class="form-group">
                         <label>Tipo</label>
-                        <div class="type-toggle">
-                            <button type="button" class="type-btn expense-type active" data-type="expense"
-                                id="modalTypeExpense">
-                                <i class="ri-arrow-down-circle-line"></i> Despesa
-                            </button>
+                        <div class="type-toggle type-toggle-four">
                             <button type="button" class="type-btn income-type" data-type="income" id="modalTypeIncome">
                                 <i class="ri-arrow-up-circle-line"></i> Receita
+                            </button>
+                            <button type="button" class="type-btn investment-type" data-type="investment" id="modalTypeInvestment">
+                                <i class="ri-line-chart-line"></i> Investimento
+                            </button>
+                            <button type="button" class="type-btn expense-type active" data-type="expense" id="modalTypeExpense">
+                                <i class="ri-arrow-down-circle-line"></i> Despesa
+                            </button>
+                            <button type="button" class="type-btn loan-type" data-type="loan" id="modalTypeLoan">
+                                <i class="ri-hand-coin-line"></i> Empréstimo
                             </button>
                         </div>
                     </div>
@@ -428,19 +462,17 @@
                         <label for="modalCategory">Categoria</label>
                         <select class="form-control" id="modalCategory" required>
                             <option value="">Selecione uma categoria</option>
-                            <option value="food">🍔 Alimentação</option>
-                            <option value="transport">🚗 Transporte</option>
-                            <option value="housing">🏠 Moradia</option>
-                            <option value="health">💊 Saúde</option>
-                            <option value="education">📚 Educação</option>
-                            <option value="entertainment">🎮 Lazer</option>
-                            <option value="shopping">🛍️ Compras</option>
-                            <option value="bills">📄 Contas</option>
-                            <option value="salary">💰 Salário</option>
-                            <option value="freelance">💼 Freelance</option>
-                            <option value="investment">📈 Investimentos</option>
-                            <option value="others">📦 Outros</option>
                         </select>
+                        <div class="form-group" id="modalNovaCategoriaWrap" style="display: none; margin-top: 8px;">
+                            <label for="modalNovaCategoriaNome">Nome da nova categoria</label>
+                            <input type="text" class="form-control" id="modalNovaCategoriaNome" placeholder="Ex: Academia, Streaming...">
+                        </div>
+                        <div class="form-group" id="modalParcelasWrap" style="display: none; margin-top: 8px;">
+                            <label for="modalParcelasTotal">Quantidade de parcelas</label>
+                            <input type="number" class="form-control" id="modalParcelasTotal" placeholder="Ex: 12" min="1" max="999">
+                            <label for="modalParcelaAtual" style="margin-top: 6px;">Parcela atual (opcional)</label>
+                            <input type="number" class="form-control" id="modalParcelaAtual" placeholder="Ex: 1" min="1" max="999">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="modalNotes">Observações (opcional)</label>
@@ -472,6 +504,45 @@
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Nova Categoria -->
+    <div class="modal-overlay" id="newCategoryOverlay">
+        <div class="modal" style="max-width: 420px;">
+            <div class="modal-header">
+                <h3><i class="ri-folder-add-line"></i> Nova categoria</h3>
+                <button class="modal-close" id="newCategoryClose" type="button"><i class="ri-close-line"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="newCategoryName">Nome da categoria</label>
+                    <input type="text" class="form-control" id="newCategoryName" placeholder="Ex: Academia, Streaming...">
+                </div>
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <div class="type-toggle type-toggle-four new-category-types">
+                        <button type="button" class="type-btn income-type" data-type="income" title="Receita">
+                            <i class="ri-arrow-up-circle-line"></i> Receita
+                        </button>
+                        <button type="button" class="type-btn expense-type active" data-type="expense" title="Despesa">
+                            <i class="ri-arrow-down-circle-line"></i> Despesa
+                        </button>
+                        <button type="button" class="type-btn investment-type" data-type="investment" title="Investimento">
+                            <i class="ri-line-chart-line"></i> Investimento
+                        </button>
+                        <button type="button" class="type-btn loan-type" data-type="loan" title="Empréstimo">
+                            <i class="ri-hand-coin-line"></i> Empréstimo
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="newCategoryCancel" type="button">Cancelar</button>
+                <button class="btn btn-primary" id="newCategorySave" type="button">
+                    <i class="ri-add-line"></i> Adicionar
+                </button>
             </div>
         </div>
     </div>

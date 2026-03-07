@@ -1,20 +1,33 @@
-// ===== FinanceFlow - Dashboard de Gastos Mensais =====
+// ===== GestaoFinanceiraGu - Dashboard de Gastos Mensais =====
 
 // ===== Data & State =====
+// Categorias fixas: Receita, Investimento, Despesa, Emprestimo
 const CATEGORIES = {
-  food: { name: 'Alimentação', icon: 'ri-restaurant-2-line', emoji: '🍔', color: '#f97316', budget: 1500 },
-  transport: { name: 'Transporte', icon: 'ri-car-line', emoji: '🚗', color: '#3b82f6', budget: 800 },
-  housing: { name: 'Moradia', icon: 'ri-home-4-line', emoji: '🏠', color: '#8b5cf6', budget: 2000 },
-  health: { name: 'Saúde', icon: 'ri-heart-pulse-line', emoji: '💊', color: '#10b981', budget: 500 },
-  education: { name: 'Educação', icon: 'ri-book-open-line', emoji: '📚', color: '#06b6d4', budget: 600 },
-  entertainment: { name: 'Lazer', icon: 'ri-gamepad-line', emoji: '🎮', color: '#ec4899', budget: 400 },
-  shopping: { name: 'Compras', icon: 'ri-shopping-bag-3-line', emoji: '🛍️', color: '#f43f5e', budget: 700 },
-  bills: { name: 'Contas', icon: 'ri-file-text-line', emoji: '📄', color: '#eab308', budget: 1200 },
-  salary: { name: 'Salário', icon: 'ri-money-dollar-circle-line', emoji: '💰', color: '#22c55e', budget: 0 },
-  freelance: { name: 'Freelance', icon: 'ri-briefcase-line', emoji: '💼', color: '#14b8a6', budget: 0 },
-  investment: { name: 'Investimentos', icon: 'ri-line-chart-line', emoji: '📈', color: '#8b5cf6', budget: 0 },
-  others: { name: 'Outros', icon: 'ri-archive-line', emoji: '📦', color: '#6b7280', budget: 500 },
+  // Receita
+  folha: { name: 'Folha', icon: 'ri-money-dollar-circle-line', emoji: '💰', color: '#22c55e', budget: 0, type: 'income' },
+  adto_quinzenal: { name: 'Adto. Quinzenal', icon: 'ri-calendar-check-line', emoji: '📅', color: '#10b981', budget: 0, type: 'income' },
+  ferias: { name: 'Férias', icon: 'ri-sun-line', emoji: '☀️', color: '#14b8a6', budget: 0, type: 'income' },
+  decimo_terceiro: { name: '13', icon: 'ri-gift-line', emoji: '🎁', color: '#06b6d4', budget: 0, type: 'income' },
+  plr_bonus: { name: 'PLR/Bonus', icon: 'ri-trophy-line', emoji: '🏆', color: '#f59e0b', budget: 0, type: 'income' },
+  saque_cripto_p2p: { name: 'Saque Cripto / P2P', icon: 'ri-exchange-line', emoji: '💱', color: '#f43f5e', budget: 0, type: 'income' },
+  // Investimento
+  prev_priv_variavel: { name: 'Prev. Priv. Variavel', icon: 'ri-line-chart-line', emoji: '📈', color: '#3b82f6', budget: 0, type: 'investment' },
+  prev_priv_fixa: { name: 'Prev. Priv. Fixa', icon: 'ri-bank-line', emoji: '🏦', color: '#8b5cf6', budget: 0, type: 'investment' },
+  cripto: { name: 'Cripto', icon: 'ri-currency-line', emoji: '₿', color: '#f97316', budget: 0, type: 'investment' },
+  // Despesa
+  conta_vivo_celular: { name: 'Conta Vivo Celular', icon: 'ri-smartphone-line', emoji: '📱', color: '#22c55e', budget: 0, type: 'expense' },
+  conta_vivo_casa: { name: 'Conta Vivo Casa', icon: 'ri-home-wifi-line', emoji: '🏠', color: '#22c55e', budget: 0, type: 'expense' },
+  conta_luz: { name: 'Conta Luz', icon: 'ri-lightbulb-line', emoji: '💡', color: '#eab308', budget: 0, type: 'expense' },
+  fatura_nubank: { name: 'Fatura Nubank', icon: 'ri-bank-card-line', emoji: '💳', color: '#8b5cf6', budget: 0, type: 'expense' },
+  fatura_mercadopago: { name: 'Fatura MercadoPago', icon: 'ri-wallet-3-line', emoji: '🛒', color: '#06b6d4', budget: 0, type: 'expense' },
+  others: { name: 'Outros', icon: 'ri-archive-line', emoji: '📦', color: '#6b7280', budget: 0, type: 'expense' },
+  // Emprestimo
+  emprestimo_1: { name: 'Emprestimo 1', icon: 'ri-hand-coin-line', emoji: '📋', color: '#ef4444', budget: 0, type: 'loan', isLoan: true },
+  emprestimo_2: { name: 'Emprestimo 2', icon: 'ri-hand-coin-line', emoji: '📋', color: '#dc2626', budget: 0, type: 'loan', isLoan: true },
+  emprestimo_3: { name: 'Emprestimo 3', icon: 'ri-hand-coin-line', emoji: '📋', color: '#b91c1c', budget: 0, type: 'loan', isLoan: true },
 };
+const CUSTOM_CATEGORIES_KEY = 'gestaofinanceiragu_custom_categories';
+let customCategories = {}; // { id: { name, icon, emoji, color, budget, type } }
 
 const MONTH_NAMES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -39,24 +52,179 @@ document.addEventListener('DOMContentLoaded', () => {
   loadTheme();
   setupEventListeners();
   setDefaultDates();
+  populateCategorySelects();
+  setupCategoryAndParcelasListeners();
   updateAll();
   addSampleData();
 });
 
 // ===== LocalStorage =====
 function saveData() {
-  localStorage.setItem('financeflow_transactions', JSON.stringify(state.transactions));
+  localStorage.setItem('gestaofinanceiragu_transactions', JSON.stringify(state.transactions));
+}
+
+function saveCustomCategories() {
+  localStorage.setItem(CUSTOM_CATEGORIES_KEY, JSON.stringify(customCategories));
 }
 
 function loadData() {
-  const saved = localStorage.getItem('financeflow_transactions');
+  const saved = localStorage.getItem('gestaofinanceiragu_transactions');
   if (saved) {
     state.transactions = JSON.parse(saved);
   }
+  const savedCustom = localStorage.getItem(CUSTOM_CATEGORIES_KEY);
+  if (savedCustom) {
+    try {
+      customCategories = JSON.parse(savedCustom);
+    } catch (_) {
+      customCategories = {};
+    }
+  }
+}
+
+function getAllCategories() {
+  return { ...CATEGORIES, ...customCategories };
+}
+
+function getCategory(key) {
+  return CATEGORIES[key] || customCategories[key] || CATEGORIES.others;
+}
+
+function isLoanCategory(key) {
+  const cat = getCategory(key);
+  return cat && cat.isLoan === true;
+}
+
+function populateCategorySelects() {
+  const allCats = getAllCategories();
+  const byType = {
+    income: Object.entries(allCats).filter(([, v]) => v.type === 'income'),
+    investment: Object.entries(allCats).filter(([, v]) => v.type === 'investment'),
+    expense: Object.entries(allCats).filter(([, v]) => v.type === 'expense' || !v.type),
+    loan: Object.entries(allCats).filter(([, v]) => v.type === 'loan'),
+  };
+  const typeLabels = { income: 'Receita', investment: 'Investimento', expense: 'Despesa', loan: 'Emprestimo' };
+
+  function fillSelect(selectEl, currentType) {
+    if (!selectEl) return;
+    const list = byType[currentType] || [];
+    const label = typeLabels[currentType] || currentType;
+    let html = '<option value="">Selecione uma categoria</option>';
+    html += `<optgroup label="${label}">`;
+    list.forEach(([key, cat]) => {
+      html += `<option value="${key}">${cat.emoji} ${cat.name}</option>`;
+    });
+    html += '</optgroup>';
+    html += '<option value="__nova_categoria__">➕ Nova categoria...</option>';
+    selectEl.innerHTML = html;
+  }
+
+  const modalCat = document.getElementById('modalCategory');
+  const pageCat = document.getElementById('pageCategory');
+  const modalType = getModalType();
+  const pageType = getPageType();
+  fillSelect(modalCat, modalType);
+  fillSelect(pageCat, pageType);
+}
+
+function setupCategoryAndParcelasListeners() {
+  function toggleParcelas(selectId, wrapId) {
+    const select = document.getElementById(selectId);
+    const wrap = document.getElementById(wrapId);
+    if (!select || !wrap) return;
+    const key = select.value;
+    const show = key === 'emprestimo_1' || key === 'emprestimo_2' || key === 'emprestimo_3';
+    wrap.style.display = show ? 'block' : 'none';
+  }
+
+  function handleCategoryChange(selectId, wrapId, novaCategoriaWrapId) {
+    const select = document.getElementById(selectId);
+    const wrap = document.getElementById(wrapId);
+    const novaWrap = document.getElementById(novaCategoriaWrapId);
+    if (!select) return;
+    if (select.value === '__nova_categoria__') {
+      if (novaWrap) novaWrap.style.display = 'block';
+      if (wrap) wrap.style.display = 'none';
+      return;
+    }
+    if (novaWrap) novaWrap.style.display = 'none';
+    toggleParcelas(selectId, wrapId);
+  }
+
+  ['modalCategory', 'pageCategory'].forEach(selectId => {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    select.addEventListener('change', () => {
+      const wrapId = selectId === 'modalCategory' ? 'modalParcelasWrap' : 'pageParcelasWrap';
+      const novaWrapId = selectId === 'modalCategory' ? 'modalNovaCategoriaWrap' : 'pageNovaCategoriaWrap';
+      handleCategoryChange(selectId, wrapId, novaWrapId);
+    });
+  });
+
+  const hideNovaAndParcelas = (parcelasId, novaId) => {
+    const pw = document.getElementById(parcelasId);
+    const nw = document.getElementById(novaId);
+    if (pw) pw.style.display = 'none';
+    if (nw) nw.style.display = 'none';
+  };
+
+  ['modalTypeIncome', 'modalTypeInvestment', 'modalTypeExpense', 'modalTypeLoan'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', () => {
+      populateCategorySelects();
+      hideNovaAndParcelas('modalParcelasWrap', 'modalNovaCategoriaWrap');
+      if (getModalType() === 'loan') document.getElementById('modalParcelasWrap').style.display = 'block';
+    });
+  });
+  ['pageTypeIncome', 'pageTypeInvestment', 'pageTypeExpense', 'pageTypeLoan'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', () => {
+      populateCategorySelects();
+      hideNovaAndParcelas('pageParcelasWrap', 'pageNovaCategoriaWrap');
+      if (getPageType() === 'loan') document.getElementById('pageParcelasWrap').style.display = 'block';
+    });
+  });
+}
+
+function addCustomCategory(name, type) {
+  const id = 'custom_' + Date.now();
+  customCategories[id] = {
+    name: name.trim(),
+    icon: 'ri-add-line',
+    emoji: '📌',
+    color: '#6b7280',
+    budget: 0,
+    type: type || 'expense',
+  };
+  saveCustomCategories();
+  populateCategorySelects();
+  return id;
+}
+
+function isCustomCategory(key) {
+  return typeof key === 'string' && key.startsWith('custom_');
+}
+
+function deleteCustomCategory(key) {
+  if (!isCustomCategory(key)) return;
+  const cat = customCategories[key];
+  if (!cat) return;
+  const count = state.transactions.filter(t => t.category === key).length;
+  const msg = count > 0
+    ? `Excluir a categoria "${cat.name}"? As ${count} transação(ões) serão movidas para "Outros".`
+    : `Excluir a categoria "${cat.name}"?`;
+  if (!confirm(msg)) return;
+
+  state.transactions.forEach(t => {
+    if (t.category === key) t.category = 'others';
+  });
+  delete customCategories[key];
+  saveCustomCategories();
+  saveData();
+  showToast('Categoria excluída.', 'success');
+  updateAll();
 }
 
 function loadTheme() {
-  const savedTheme = localStorage.getItem('financeflow_theme') || 'light';
+  const savedTheme = localStorage.getItem('gestaofinanceiragu_theme') || 'light';
   state.theme = savedTheme;
   document.documentElement.setAttribute('data-theme', savedTheme);
   updateThemeUI();
@@ -72,49 +240,6 @@ function updateThemeUI() {
     icon.className = 'ri-moon-line';
     label.textContent = 'Modo Escuro';
   }
-}
-
-// ===== Sample Data =====
-function addSampleData() {
-  // Só adiciona dados de exemplo na primeira vez que o app é aberto
-  if (localStorage.getItem('financeflow_initialized')) return;
-  localStorage.setItem('financeflow_initialized', 'true');
-
-  const year = state.currentYear;
-  const month = state.currentMonth;
-
-  const samples = [
-    { name: 'Salário', amount: 8500, type: 'income', category: 'salary', date: `${year}-${pad(month + 1)}-05` },
-    { name: 'Freelance Website', amount: 2800, type: 'income', category: 'freelance', date: `${year}-${pad(month + 1)}-10` },
-    { name: 'Aluguel', amount: 1800, type: 'expense', category: 'housing', date: `${year}-${pad(month + 1)}-01` },
-    { name: 'Supermercado', amount: 650, type: 'expense', category: 'food', date: `${year}-${pad(month + 1)}-03` },
-    { name: 'Uber / 99', amount: 180, type: 'expense', category: 'transport', date: `${year}-${pad(month + 1)}-04` },
-    { name: 'Academia', amount: 120, type: 'expense', category: 'health', date: `${year}-${pad(month + 1)}-05` },
-    { name: 'Netflix + Spotify', amount: 75, type: 'expense', category: 'entertainment', date: `${year}-${pad(month + 1)}-06` },
-    { name: 'Curso Online', amount: 297, type: 'expense', category: 'education', date: `${year}-${pad(month + 1)}-07` },
-    { name: 'Energia Elétrica', amount: 215, type: 'expense', category: 'bills', date: `${year}-${pad(month + 1)}-10` },
-    { name: 'Internet', amount: 130, type: 'expense', category: 'bills', date: `${year}-${pad(month + 1)}-10` },
-    { name: 'Roupas', amount: 350, type: 'expense', category: 'shopping', date: `${year}-${pad(month + 1)}-12` },
-    { name: 'Restaurante', amount: 185, type: 'expense', category: 'food', date: `${year}-${pad(month + 1)}-14` },
-    { name: 'Combustível', amount: 250, type: 'expense', category: 'transport', date: `${year}-${pad(month + 1)}-15` },
-    { name: 'Farmácia', amount: 95, type: 'expense', category: 'health', date: `${year}-${pad(month + 1)}-18` },
-    { name: 'Presente Aniversário', amount: 200, type: 'expense', category: 'shopping', date: `${year}-${pad(month + 1)}-20` },
-    { name: 'Celular', amount: 89, type: 'expense', category: 'bills', date: `${year}-${pad(month + 1)}-15` },
-    { name: 'Dividendos', amount: 450, type: 'income', category: 'investment', date: `${year}-${pad(month + 1)}-22` },
-  ];
-
-  state.transactions = samples.map((s, i) => ({
-    id: Date.now() + i,
-    name: s.name,
-    amount: s.amount,
-    type: s.type,
-    category: s.category,
-    date: s.date,
-    notes: '',
-  }));
-
-  saveData();
-  updateAll();
 }
 
 function pad(n) {
@@ -154,20 +279,45 @@ function setupEventListeners() {
     if (e.target === e.currentTarget) closeModal();
   });
 
-  // Modal type toggle
+  // Modal type toggle (4 tipos)
   document.getElementById('modalTypeExpense').addEventListener('click', () => setModalType('expense'));
   document.getElementById('modalTypeIncome').addEventListener('click', () => setModalType('income'));
+  document.getElementById('modalTypeInvestment').addEventListener('click', () => setModalType('investment'));
+  document.getElementById('modalTypeLoan').addEventListener('click', () => setModalType('loan'));
 
-  // Page form
-  document.getElementById('expenseFormPage').addEventListener('submit', handlePageFormSubmit);
+  // Page form type toggle (4 tipos)
   document.getElementById('pageTypeExpense').addEventListener('click', () => setPageType('expense'));
   document.getElementById('pageTypeIncome').addEventListener('click', () => setPageType('income'));
+  document.getElementById('pageTypeInvestment').addEventListener('click', () => setPageType('investment'));
+  document.getElementById('pageTypeLoan').addEventListener('click', () => setPageType('loan'));
+
+  // Page form submit
+  document.getElementById('expenseFormPage').addEventListener('submit', handlePageFormSubmit);
 
   // Confirm delete
   document.getElementById('confirmCancel').addEventListener('click', closeConfirm);
   document.getElementById('confirmDelete').addEventListener('click', confirmDeleteTransaction);
   document.getElementById('confirmOverlay').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeConfirm();
+  });
+
+  document.getElementById('newCategoryClose').addEventListener('click', closeNewCategoryModal);
+  document.getElementById('newCategoryCancel').addEventListener('click', closeNewCategoryModal);
+  document.getElementById('newCategorySave').addEventListener('click', saveNewCategoryFromModal);
+  document.getElementById('newCategoryOverlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeNewCategoryModal();
+  });
+  document.querySelectorAll('#newCategoryOverlay .type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#newCategoryOverlay .type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+  document.getElementById('newCategoryName').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveNewCategoryFromModal();
+    }
   });
 
   // Filters
@@ -189,6 +339,7 @@ function setupEventListeners() {
     if (e.key === 'Escape') {
       closeModal();
       closeConfirm();
+      closeNewCategoryModal();
       closeMobileSidebar();
     }
   });
@@ -202,6 +353,9 @@ function setupEventListeners() {
 
   const fileImportJSON = document.getElementById('fileImportJSON');
   if (fileImportJSON) fileImportJSON.addEventListener('change', importDataJSON);
+
+  const btnClearAllData = document.getElementById('btnClearAllData');
+  if (btnClearAllData) btnClearAllData.addEventListener('click', clearAllData);
 }
 
 // ===== Navigation =====
@@ -232,6 +386,7 @@ function navigateTo(page) {
   document.getElementById('pageTitle').textContent = title;
   document.getElementById('pageSubtitle').textContent = subtitle;
 
+  if (page === 'add-expense') populateCategorySelects();
   updateAll();
 }
 
@@ -239,7 +394,7 @@ function navigateTo(page) {
 function toggleTheme() {
   state.theme = state.theme === 'light' ? 'dark' : 'light';
   document.documentElement.setAttribute('data-theme', state.theme);
-  localStorage.setItem('financeflow_theme', state.theme);
+  localStorage.setItem('gestaofinanceiragu_theme', state.theme);
   updateThemeUI();
   updateCharts();
 }
@@ -316,23 +471,25 @@ function updateSummaryCards() {
 
   const income = transactions.filter(t => t.type === 'income').reduce((a, t) => a + t.amount, 0);
   const expense = transactions.filter(t => t.type === 'expense').reduce((a, t) => a + t.amount, 0);
-  const balance = income - expense;
+  const investment = transactions.filter(t => t.type === 'investment').reduce((a, t) => a + t.amount, 0);
+  const loan = transactions.filter(t => t.type === 'loan').reduce((a, t) => a + t.amount, 0);
+  const balance = income - expense - investment - loan;
 
-  document.getElementById('totalRecords').textContent = transactions.length;
   document.getElementById('totalIncome').textContent = formatCurrency(income);
   document.getElementById('totalExpense').textContent = formatCurrency(expense);
+  document.getElementById('totalInvestment').textContent = formatCurrency(investment);
+  document.getElementById('totalLoan').textContent = formatCurrency(loan);
   document.getElementById('totalBalance').textContent = formatCurrency(balance);
 
-  // Dynamic labels based on view mode
   const isYear = state.viewMode === 'year';
-  document.getElementById('periodLabel').textContent = isYear ? 'transações este ano' : 'transações este mês';
+  const periodLabel = document.getElementById('periodLabel');
+  if (periodLabel) periodLabel.textContent = isYear ? 'entradas este ano' : 'entradas no período';
 
   const dailyTitle = document.getElementById('dailyChartTitle');
   const dailyBadge = document.getElementById('dailyChartBadge');
   if (dailyTitle) dailyTitle.textContent = isYear ? 'Despesas Mensais' : 'Despesas Diárias';
   if (dailyBadge) dailyBadge.textContent = isYear ? 'Visão Anual' : 'Últimos 30 dias';
 
-  // Balance color
   const balanceEl = document.getElementById('totalBalance');
   balanceEl.style.color = balance >= 0 ? 'var(--color-income)' : 'var(--color-expense)';
 }
@@ -385,8 +542,8 @@ function updateDailyChart(transactions, colors) {
     transactions.forEach(t => {
       const d = new Date(t.date + 'T00:00:00');
       const month = d.getMonth();
-      if (t.type === 'expense') expenseData[month] += t.amount;
-      else incomeData[month] += t.amount;
+      if (t.type === 'income') incomeData[month] += t.amount;
+      else if (t.type === 'expense' || t.type === 'investment' || t.type === 'loan') expenseData[month] += t.amount;
     });
   } else {
     // Visão mensal: agrupar por dia
@@ -398,8 +555,8 @@ function updateDailyChart(transactions, colors) {
     transactions.forEach(t => {
       const d = new Date(t.date + 'T00:00:00');
       const day = d.getDate() - 1;
-      if (t.type === 'expense') expenseData[day] += t.amount;
-      else incomeData[day] += t.amount;
+      if (t.type === 'income') incomeData[day] += t.amount;
+      else if (t.type === 'expense' || t.type === 'investment' || t.type === 'loan') expenseData[day] += t.amount;
     });
   }
 
@@ -472,7 +629,7 @@ function updateCategoryChart(transactions, colors) {
   const canvas = document.getElementById('categoryChart');
   if (!canvas) return;
 
-  const expenses = transactions.filter(t => t.type === 'expense');
+  const expenses = transactions.filter(t => t.type === 'expense' || t.type === 'investment' || t.type === 'loan');
   const catTotals = {};
 
   expenses.forEach(t => {
@@ -480,9 +637,9 @@ function updateCategoryChart(transactions, colors) {
   });
 
   const sortedCats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
-  const labels = sortedCats.map(([k]) => CATEGORIES[k]?.name || k);
+  const labels = sortedCats.map(([k]) => getCategory(k).name);
   const data = sortedCats.map(([, v]) => v);
-  const bgColors = sortedCats.map(([k]) => CATEGORIES[k]?.color || '#6b7280');
+  const bgColors = sortedCats.map(([k]) => getCategory(k).color || '#6b7280');
 
   categoryChart = new Chart(canvas, {
     type: 'doughnut',
@@ -555,7 +712,7 @@ function updateComparisonChart(transactions, colors) {
     });
 
     incomeData.push(monthTx.filter(t => t.type === 'income').reduce((a, t) => a + t.amount, 0));
-    expenseData.push(monthTx.filter(t => t.type === 'expense').reduce((a, t) => a + t.amount, 0));
+    expenseData.push(monthTx.filter(t => t.type === 'expense' || t.type === 'investment' || t.type === 'loan').reduce((a, t) => a + t.amount, 0));
   }
 
   comparisonChart = new Chart(canvas, {
@@ -637,7 +794,7 @@ function updateTrendChart(colors) {
     });
 
     const income = monthTx.filter(t => t.type === 'income').reduce((a, t) => a + t.amount, 0);
-    const expense = monthTx.filter(t => t.type === 'expense').reduce((a, t) => a + t.amount, 0);
+    const expense = monthTx.filter(t => t.type === 'expense' || t.type === 'investment' || t.type === 'loan').reduce((a, t) => a + t.amount, 0);
     balanceData.push(income - expense);
   }
 
@@ -695,9 +852,11 @@ function updateTrendChart(colors) {
 
 // ===== Render Transactions =====
 function createTransactionHTML(t) {
-  const cat = CATEGORIES[t.category] || CATEGORIES.others;
-  const amountClass = t.type === 'expense' ? 'expense' : 'income';
-  const amountPrefix = t.type === 'expense' ? '- ' : '+ ';
+  const cat = getCategory(t.category);
+  const isIncome = t.type === 'income';
+  const amountClass = isIncome ? 'income' : 'expense';
+  const amountPrefix = isIncome ? '+ ' : '- ';
+  const parcelasInfo = (t.parcelas && t.parcelaAtual) ? ` (${t.parcelaAtual}/${t.parcelas})` : (t.parcelas ? ` (${t.parcelas} parcelas)` : '');
 
   return `
     <div class="transaction-item" data-id="${t.id}">
@@ -706,7 +865,7 @@ function createTransactionHTML(t) {
       </div>
       <div class="transaction-info">
         <div class="transaction-name">${t.name}</div>
-        <div class="transaction-category">${cat.name}</div>
+        <div class="transaction-category">${cat.name}${parcelasInfo}</div>
       </div>
       <div class="transaction-date">${formatDate(t.date)}</div>
       <div class="transaction-amount ${amountClass}">
@@ -771,38 +930,115 @@ function renderAllTransactions() {
 // ===== Categories =====
 function renderCategories() {
   const container = document.getElementById('categoriesGrid');
-  const transactions = getFilteredTransactions().filter(t => t.type === 'expense');
+  const transactions = getFilteredTransactions();
   const catTotals = {};
+  const allCats = getAllCategories();
 
   transactions.forEach(t => {
     catTotals[t.category] = (catTotals[t.category] || 0) + t.amount;
   });
 
-  const allCats = Object.entries(CATEGORIES).filter(([, v]) => v.budget > 0 || catTotals[v] > 0);
+  const typeOrder = ['income', 'investment', 'expense', 'loan'];
+  const typeLabels = { income: 'Receita', investment: 'Investimento', expense: 'Despesa', loan: 'Empréstimo' };
+  let html = '';
 
-  container.innerHTML = allCats.map(([key, cat]) => {
-    const total = catTotals[key] || 0;
-    return `
-      <div class="category-card">
+  typeOrder.forEach(type => {
+    const cats = Object.entries(allCats).filter(([k, v]) => (v.type === type) || (type === 'expense' && k === 'others'));
+    if (cats.length === 0) return;
+    html += `<div class="categories-section-title">${typeLabels[type]}</div>`;
+    html += `<div class="categories-section-grid">`;
+    cats.forEach(([key, cat]) => {
+      const total = catTotals[key] || 0;
+      const count = transactions.filter(t => t.category === key).length;
+      const canDelete = isCustomCategory(key);
+      const deleteBtn = canDelete
+        ? `<button type="button" class="btn-delete-category" data-category="${key}" title="Excluir categoria" aria-label="Excluir categoria"><i class="ri-delete-bin-line"></i></button>`
+        : '';
+      const amountColor = type === 'income' ? 'var(--color-income)' : (total > 0 ? 'var(--color-expense)' : 'var(--text-muted)');
+      html += `
+      <div class="category-card" style="${canDelete ? 'position: relative;' : ''}">
+        ${deleteBtn}
         <div class="category-icon-large" style="background: ${cat.color}15; color: ${cat.color};">
           <i class="${cat.icon}"></i>
         </div>
         <div class="category-details">
           <h4>${cat.name}</h4>
-          <span>${transactions.filter(t => t.category === key).length} transações</span>
+          <span>${count} transações</span>
         </div>
-        <div class="category-amount" style="color: ${total > 0 ? 'var(--color-expense)' : 'var(--text-muted)'};">
+        <div class="category-amount" style="color: ${amountColor};">
           ${formatCurrency(total)}
         </div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+
+  html += `
+    <div class="categories-section-title" style="margin-top: 16px;">Outros</div>
+    <div class="categories-section-grid">
+      <div class="category-card" style="border: 2px dashed var(--border-color); background: transparent; cursor: pointer;" id="btnAddCategoryCard" title="Adicionar nova categoria">
+        <div class="category-icon-large" style="background: var(--accent-primary)15; color: var(--accent-primary);">
+          <i class="ri-add-line"></i>
+        </div>
+        <div class="category-details">
+          <h4>Adicionar categoria</h4>
+          <span>Incluir nova categoria personalizada</span>
+        </div>
       </div>
-    `;
-  }).join('');
+    </div>`;
+
+  container.innerHTML = html;
+
+  container.querySelectorAll('.btn-delete-category').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteCustomCategory(btn.getAttribute('data-category'));
+    });
+  });
+
+  document.getElementById('btnAddCategoryCard')?.addEventListener('click', () => {
+    openNewCategoryModal();
+  });
+}
+
+function openNewCategoryModal() {
+  document.getElementById('newCategoryName').value = '';
+  document.querySelectorAll('#newCategoryOverlay .type-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.type === 'expense');
+  });
+  document.getElementById('newCategoryOverlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('newCategoryName').focus(), 200);
+}
+
+function closeNewCategoryModal() {
+  document.getElementById('newCategoryOverlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function getNewCategoryType() {
+  const btn = document.querySelector('#newCategoryOverlay .type-btn.active');
+  return (btn && btn.dataset.type) ? btn.dataset.type : 'expense';
+}
+
+function saveNewCategoryFromModal() {
+  const name = document.getElementById('newCategoryName').value.trim();
+  if (!name) {
+    showToast('Digite o nome da categoria', 'error');
+    return;
+  }
+  const type = getNewCategoryType();
+  addCustomCategory(name, type);
+  const typeLabels = { income: 'Receita', expense: 'Despesa', investment: 'Investimento', loan: 'Empréstimo' };
+  showToast(`Categoria "${name}" adicionada em ${typeLabels[type]}!`, 'success');
+  closeNewCategoryModal();
+  renderCategories();
 }
 
 // ===== Reports =====
 function updateReports() {
   const transactions = getFilteredTransactions();
-  const expenses = transactions.filter(t => t.type === 'expense');
+  const expenses = transactions.filter(t => t.type === 'expense' || t.type === 'investment' || t.type === 'loan');
 
   // Average daily
   const totalExpense = expenses.reduce((a, t) => a + t.amount, 0);
@@ -826,7 +1062,7 @@ function updateReports() {
     catTotals[t.category] = (catTotals[t.category] || 0) + t.amount;
   });
   const topCat = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0];
-  document.getElementById('topCategory').textContent = topCat ? CATEGORIES[topCat[0]]?.name || '-' : '-';
+  document.getElementById('topCategory').textContent = topCat ? getCategory(topCat[0]).name : '-';
 
   // Budget progress
   renderBudgetProgress(catTotals);
@@ -834,7 +1070,8 @@ function updateReports() {
 
 function renderBudgetProgress(catTotals) {
   const container = document.getElementById('budgetList');
-  const budgetCats = Object.entries(CATEGORIES).filter(([, v]) => v.budget > 0);
+  const allCats = getAllCategories();
+  const budgetCats = Object.entries(allCats).filter(([, v]) => v.budget > 0);
 
   container.innerHTML = budgetCats.map(([key, cat]) => {
     const spent = catTotals[key] || 0;
@@ -864,6 +1101,12 @@ function openModal(editId) {
   document.getElementById('expenseForm').reset();
   setModalType('expense');
   setDefaultDates();
+  populateCategorySelects();
+
+  const parcelasWrap = document.getElementById('modalParcelasWrap');
+  const novaWrap = document.getElementById('modalNovaCategoriaWrap');
+  if (parcelasWrap) parcelasWrap.style.display = 'none';
+  if (novaWrap) novaWrap.style.display = 'none';
 
   if (typeof editId === 'number') {
     const t = state.transactions.find(tx => tx.id === editId);
@@ -876,7 +1119,12 @@ function openModal(editId) {
       document.getElementById('modalDate').value = t.date;
       document.getElementById('modalCategory').value = t.category;
       document.getElementById('modalNotes').value = t.notes || '';
+      if (document.getElementById('modalParcelasTotal')) document.getElementById('modalParcelasTotal').value = t.parcelas || '';
+      if (document.getElementById('modalParcelaAtual')) document.getElementById('modalParcelaAtual').value = t.parcelaAtual || '';
       setModalType(t.type);
+      if (isLoanCategory(t.category)) {
+        if (parcelasWrap) parcelasWrap.style.display = 'block';
+      }
     }
   }
 
@@ -893,16 +1141,40 @@ function closeModal() {
 }
 
 function setModalType(type) {
-  const expBtn = document.getElementById('modalTypeExpense');
-  const incBtn = document.getElementById('modalTypeIncome');
-  expBtn.classList.toggle('active', type === 'expense');
-  incBtn.classList.toggle('active', type === 'income');
-  expBtn.dataset.selected = type === 'expense';
-  incBtn.dataset.selected = type === 'income';
+  const types = ['income', 'investment', 'expense', 'loan'];
+  types.forEach(t => {
+    const btn = document.getElementById('modalType' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (btn) {
+      btn.classList.toggle('active', t === type);
+      btn.dataset.selected = t === type;
+    }
+  });
+  const parcelasWrap = document.getElementById('modalParcelasWrap');
+  const novaWrap = document.getElementById('modalNovaCategoriaWrap');
+  if (parcelasWrap) parcelasWrap.style.display = type === 'loan' ? 'block' : 'none';
+  if (novaWrap) novaWrap.style.display = 'none';
 }
 
 function getModalType() {
-  return document.getElementById('modalTypeIncome').classList.contains('active') ? 'income' : 'expense';
+  const btn = document.querySelector('#modalOverlay .type-btn.active');
+  return (btn && btn.dataset.type) ? btn.dataset.type : 'expense';
+}
+
+function getPageType() {
+  const btn = document.querySelector('#page-add-expense .type-btn.active');
+  return (btn && btn.dataset.type) ? btn.dataset.type : 'expense';
+}
+
+function setPageType(type) {
+  const types = ['income', 'investment', 'expense', 'loan'];
+  types.forEach(t => {
+    const btn = document.getElementById('pageType' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (btn) btn.classList.toggle('active', t === type);
+  });
+  const parcelasWrap = document.getElementById('pageParcelasWrap');
+  const novaWrap = document.getElementById('pageNovaCategoriaWrap');
+  if (parcelasWrap) parcelasWrap.style.display = type === 'loan' ? 'block' : 'none';
+  if (novaWrap) novaWrap.style.display = 'none';
 }
 
 function saveTransaction() {
@@ -910,24 +1182,39 @@ function saveTransaction() {
   const name = document.getElementById('modalName').value.trim();
   const amount = parseFloat(document.getElementById('modalAmount').value);
   const date = document.getElementById('modalDate').value;
-  const category = document.getElementById('modalCategory').value;
+  let category = document.getElementById('modalCategory').value;
   const notes = document.getElementById('modalNotes').value.trim();
   const type = getModalType();
+
+  if (category === '__nova_categoria__') {
+    const novaNome = document.getElementById('modalNovaCategoriaNome')?.value?.trim();
+    if (!novaNome) {
+      showToast('Digite o nome da nova categoria', 'error');
+      return;
+    }
+    category = addCustomCategory(novaNome, type);
+    document.getElementById('modalNovaCategoriaWrap').style.display = 'none';
+    document.getElementById('modalNovaCategoriaNome').value = '';
+  }
 
   if (!name || !amount || !date || !category) {
     showToast('Preencha todos os campos obrigatórios', 'error');
     return;
   }
 
+  let parcelas, parcelaAtual;
+  if (isLoanCategory(category)) {
+    parcelas = parseInt(document.getElementById('modalParcelasTotal')?.value, 10) || null;
+    parcelaAtual = parseInt(document.getElementById('modalParcelaAtual')?.value, 10) || null;
+  }
+
   if (state.editingId) {
-    // Edit existing
     const idx = state.transactions.findIndex(t => t.id === state.editingId);
     if (idx !== -1) {
-      state.transactions[idx] = { ...state.transactions[idx], name, amount, date, category, notes, type };
+      state.transactions[idx] = { ...state.transactions[idx], name, amount, date, category, notes, type, parcelas: parcelas || undefined, parcelaAtual: parcelaAtual || undefined };
       showToast('Transação atualizada com sucesso!', 'success');
     }
   } else {
-    // Add new
     state.transactions.push({
       id: Date.now(),
       name,
@@ -936,6 +1223,8 @@ function saveTransaction() {
       category,
       date,
       notes,
+      parcelas: parcelas || undefined,
+      parcelaAtual: parcelaAtual || undefined,
     });
     showToast('Transação adicionada com sucesso!', 'success');
   }
@@ -946,30 +1235,38 @@ function saveTransaction() {
 }
 
 // ===== Page Form =====
-function setPageType(type) {
-  const expBtn = document.getElementById('pageTypeExpense');
-  const incBtn = document.getElementById('pageTypeIncome');
-  expBtn.classList.toggle('active', type === 'expense');
-  incBtn.classList.toggle('active', type === 'income');
-}
-
-function getPageType() {
-  return document.getElementById('pageTypeIncome').classList.contains('active') ? 'income' : 'expense';
-}
-
 function handlePageFormSubmit(e) {
   e.preventDefault();
 
   const name = document.getElementById('pageName').value.trim();
   const amount = parseFloat(document.getElementById('pageAmount').value);
   const date = document.getElementById('pageDate').value;
-  const category = document.getElementById('pageCategory').value;
+  let category = document.getElementById('pageCategory').value;
   const notes = document.getElementById('pageNotes').value.trim();
   const type = getPageType();
+
+  if (category === '__nova_categoria__') {
+    const novaNome = document.getElementById('pageNovaCategoriaNome')?.value?.trim();
+    if (!novaNome) {
+      showToast('Digite o nome da nova categoria', 'error');
+      return;
+    }
+    category = addCustomCategory(novaNome, type);
+    const wrap = document.getElementById('pageNovaCategoriaWrap');
+    if (wrap) wrap.style.display = 'none';
+    const input = document.getElementById('pageNovaCategoriaNome');
+    if (input) input.value = '';
+  }
 
   if (!name || !amount || !date || !category) {
     showToast('Preencha todos os campos obrigatórios', 'error');
     return;
+  }
+
+  let parcelas, parcelaAtual;
+  if (isLoanCategory(category)) {
+    parcelas = parseInt(document.getElementById('pageParcelasTotal')?.value, 10) || null;
+    parcelaAtual = parseInt(document.getElementById('pageParcelaAtual')?.value, 10) || null;
   }
 
   state.transactions.push({
@@ -980,15 +1277,19 @@ function handlePageFormSubmit(e) {
     category,
     date,
     notes,
+    parcelas: parcelas || undefined,
+    parcelaAtual: parcelaAtual || undefined,
   });
 
   saveData();
   showToast('Transação adicionada com sucesso!', 'success');
 
-  // Reset form
   document.getElementById('expenseFormPage').reset();
   setPageType('expense');
   setDefaultDates();
+  populateCategorySelects();
+  const pageParcelasWrap = document.getElementById('pageParcelasWrap');
+  if (pageParcelasWrap) pageParcelasWrap.style.display = 'none';
   updateAll();
 }
 
@@ -1070,7 +1371,7 @@ function exportDataJSON() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `financeflow_backup_${new Date().toISOString().split('T')[0]}.json`;
+  a.download = `gestaofinanceiragu_backup_${new Date().toISOString().split('T')[0]}.json`;
   a.click();
   URL.revokeObjectURL(url);
   showToast('Backup JSON exportado com sucesso!', 'success');
@@ -1085,11 +1386,12 @@ function exportDataCSV() {
   const headers = ['ID', 'Tipo', 'Categoria', 'Data', 'Valor (R$)', 'Descricao', 'Observacoes'];
   const rows = [headers.join(';')];
 
+  const typeLabels = { income: 'Receita', expense: 'Despesa', investment: 'Investimento', loan: 'Emprestimo' };
   state.transactions.forEach(t => {
     const row = [
       t.id,
-      t.type === 'expense' ? 'Despesa' : 'Receita',
-      CATEGORIES[t.category]?.name || t.category,
+      typeLabels[t.type] || t.type,
+      getCategory(t.category).name,
       t.date,
       t.amount.toFixed(2).replace('.', ','),
       `"${(t.name || '').replace(/"/g, '""')}"`,
@@ -1103,7 +1405,7 @@ function exportDataCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `financeflow_export_${new Date().toISOString().split('T')[0]}.csv`;
+  a.download = `gestaofinanceiragu_export_${new Date().toISOString().split('T')[0]}.csv`;
   a.click();
   URL.revokeObjectURL(url);
   showToast('Planilha CSV exportada com sucesso!', 'success');
@@ -1137,4 +1439,27 @@ function importDataJSON(event) {
   };
   reader.readAsText(file);
   event.target.value = ''; // Reset input to allow re-importing same file
+}
+
+function clearAllData() {
+  if (confirm('Tem certeza que deseja limpar TODOS os dados? Esta ação não pode ser desfeita.')) {
+    // Clear localStorage
+    localStorage.removeItem('gestaofinanceiragu_transactions');
+    localStorage.removeItem(CUSTOM_CATEGORIES_KEY);
+    localStorage.removeItem('gestaofinanceiragu_theme');
+    localStorage.removeItem('gestaofinanceiragu_initialized');
+
+    // Reset state
+    state.transactions = [];
+    customCategories = {};
+    state.theme = 'light';
+
+    // Save empty state
+    saveData();
+    saveTheme();
+
+    // Update UI
+    updateAll();
+    showToast('Todos os dados foram limpos!', 'info');
+  }
 }

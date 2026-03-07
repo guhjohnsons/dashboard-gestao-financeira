@@ -499,7 +499,7 @@ body {
 /* ===== Summary Cards ===== */
 .summary-cards {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 20px;
     margin-bottom: 28px;
 }
@@ -538,6 +538,14 @@ body {
 
 .summary-card.balance::before {
     background: var(--color-info);
+}
+
+.summary-card.investment::before {
+    background: #3b82f6;
+}
+
+.summary-card.loan::before {
+    background: #dc2626;
 }
 
 .summary-card:hover {
@@ -588,6 +596,16 @@ body {
 .summary-card.balance .card-icon {
     background: var(--color-info-light);
     color: var(--color-info);
+}
+
+.summary-card.investment .card-icon {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+}
+
+.summary-card.loan .card-icon {
+    background: rgba(220, 38, 38, 0.15);
+    color: #dc2626;
 }
 
 .card-value {
@@ -1086,6 +1104,22 @@ select.form-control {
     gap: 8px;
 }
 
+.type-toggle-four {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+@media (max-width: 640px) {
+    .type-toggle-four {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.new-category-types.type-toggle-four {
+    grid-template-columns: repeat(2, 1fr);
+}
+
 .type-btn {
     flex: 1;
     padding: 10px 16px;
@@ -1120,6 +1154,18 @@ select.form-control {
     color: var(--color-income);
 }
 
+.type-btn.active.investment-type {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: #3b82f6;
+    color: #3b82f6;
+}
+
+.type-btn.active.loan-type {
+    background: rgba(220, 38, 38, 0.15);
+    border-color: #dc2626;
+    color: #dc2626;
+}
+
 /* ===== Add Expense Page ===== */
 .add-expense-card {
     background: var(--bg-card);
@@ -1144,9 +1190,28 @@ select.form-control {
 
 /* ===== Categories Page ===== */
 .categories-grid {
+    display: block;
+}
+
+.categories-section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    margin-top: 20px;
+}
+
+.categories-section-title:first-child {
+    margin-top: 0;
+}
+
+.categories-section-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 16px;
+    margin-bottom: 8px;
 }
 
 .category-card {
@@ -1159,11 +1224,37 @@ select.form-control {
     gap: 16px;
     transition: all var(--transition-normal);
     cursor: default;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .category-card:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
+}
+
+.btn-delete-category {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    opacity: 0.85;
+    transition: opacity 0.2s, background 0.2s;
+}
+
+.btn-delete-category:hover {
+    opacity: 1;
+    background: rgba(239, 68, 68, 0.25);
 }
 
 .category-icon-large {
@@ -1177,10 +1268,18 @@ select.form-control {
     flex-shrink: 0;
 }
 
+.category-details {
+    min-width: 0;
+    flex: 1;
+}
+
 .category-details h4 {
     font-size: 14px;
     font-weight: 600;
     margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .category-details span {
@@ -1193,6 +1292,8 @@ select.form-control {
     font-size: 15px;
     font-weight: 700;
     white-space: nowrap;
+    flex-shrink: 0;
+    min-width: fit-content;
 }
 
 /* ===== Toast Notifications ===== */
