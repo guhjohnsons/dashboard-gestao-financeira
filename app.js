@@ -55,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
   populateCategorySelects();
   setupCategoryAndParcelasListeners();
   updateAll();
-  addSampleData();
 });
 
 // ===== LocalStorage =====
@@ -1456,7 +1455,7 @@ function clearAllData() {
 
     // Save empty state
     saveData();
-    saveTheme();
+    localStorage.setItem('gestaofinanceiragu_theme', state.theme);
 
     // Update UI
     updateAll();
