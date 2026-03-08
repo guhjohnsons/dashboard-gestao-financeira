@@ -132,7 +132,7 @@ function setupCategoryAndParcelasListeners() {
     const wrap = document.getElementById(wrapId);
     if (!select || !wrap) return;
     const key = select.value;
-    const show = key === 'emprestimo_1' || key === 'emprestimo_2' || key === 'emprestimo_3';
+    const show = isLoanCategory(key);
     wrap.style.display = show ? 'block' : 'none';
   }
 
@@ -471,13 +471,19 @@ function updateSummaryCards() {
   const income = transactions.filter(t => t.type === 'income').reduce((a, t) => a + t.amount, 0);
   const expense = transactions.filter(t => t.type === 'expense').reduce((a, t) => a + t.amount, 0);
   const investment = transactions.filter(t => t.type === 'investment').reduce((a, t) => a + t.amount, 0);
-  const loan = transactions.filter(t => t.type === 'loan').reduce((a, t) => a + t.amount, 0);
-  const balance = income - expense - investment - loan;
+  
+  // Lógica especial para Empréstimos:
+  // Se for uma entrada (sem parcelaAtual), conta como "receita" de empréstimo.
+  // Se for uma parcela (com parcelaAtual), conta como "despesa" de empréstimo.
+  const loanEntries = transactions.filter(t => t.type === 'loan' && !t.parcelaAtual).reduce((a, t) => a + t.amount, 0);
+  const loanInstallments = transactions.filter(t => t.type === 'loan' && t.parcelaAtual).reduce((a, t) => a + t.amount, 0);
 
-  document.getElementById('totalIncome').textContent = formatCurrency(income);
+  const balance = (income + loanEntries) - (expense + investment + loanInstallments);
+
+  document.getElementById('totalIncome').textContent = formatCurrency(income + loanEntries);
   document.getElementById('totalExpense').textContent = formatCurrency(expense);
   document.getElementById('totalInvestment').textContent = formatCurrency(investment);
-  document.getElementById('totalLoan').textContent = formatCurrency(loan);
+  document.getElementById('totalLoan').textContent = formatCurrency(loanInstallments);
   document.getElementById('totalBalance').textContent = formatCurrency(balance);
 
   const isYear = state.viewMode === 'year';
@@ -541,8 +547,8 @@ function updateDailyChart(transactions, colors) {
     transactions.forEach(t => {
       const d = new Date(t.date + 'T00:00:00');
       const month = d.getMonth();
-      if (t.type === 'income') incomeData[month] += t.amount;
-      else if (t.type === 'expense' || t.type === 'investment' || t.type === 'loan') expenseData[month] += t.amount;
+      if (t.type === 'income' || (t.type === 'loan' && !t.parcelaAtual)) incomeData[month] += t.amount;
+      else if (t.type === 'expense' || t.type === 'investment' || (t.type === 'loan' && t.parcelaAtual)) expenseData[month] += t.amount;
     });
   } else {
     // Visão mensal: agrupar por dia
@@ -554,8 +560,8 @@ function updateDailyChart(transactions, colors) {
     transactions.forEach(t => {
       const d = new Date(t.date + 'T00:00:00');
       const day = d.getDate() - 1;
-      if (t.type === 'income') incomeData[day] += t.amount;
-      else if (t.type === 'expense' || t.type === 'investment' || t.type === 'loan') expenseData[day] += t.amount;
+      if (t.type === 'income' || (t.type === 'loan' && !t.parcelaAtual)) incomeData[day] += t.amount;
+      else if (t.type === 'expense' || t.type === 'investment' || (t.type === 'loan' && t.parcelaAtual)) expenseData[day] += t.amount;
     });
   }
 
@@ -628,7 +634,7 @@ function updateCategoryChart(transactions, colors) {
   const canvas = document.getElementById('categoryChart');
   if (!canvas) return;
 
-  const expenses = transactions.filter(t => t.type === 'expense' || t.type === 'investment' || t.type === 'loan');
+  const expenses = transactions.filter(t => t.type === 'expense' || t.type === 'investment' || (t.type === 'loan' && t.parcelaAtual));
   const catTotals = {};
 
   expenses.forEach(t => {
@@ -694,12 +700,12 @@ function updateComparisonChart(transactions, colors) {
   const canvas = document.getElementById('comparisonChart');
   if (!canvas) return;
 
-  // Show last 6 months
+  // Show last 12 months
   const labels = [];
   const incomeData = [];
   const expenseData = [];
 
-  for (let i = 5; i >= 0; i--) {
+  for (let i = 11; i >= 0; i--) {
     let m = state.currentMonth - i;
     let y = state.currentYear;
     if (m < 0) { m += 12; y--; }
@@ -710,8 +716,8 @@ function updateComparisonChart(transactions, colors) {
       return d.getMonth() === m && d.getFullYear() === y;
     });
 
-    incomeData.push(monthTx.filter(t => t.type === 'income').reduce((a, t) => a + t.amount, 0));
-    expenseData.push(monthTx.filter(t => t.type === 'expense' || t.type === 'investment' || t.type === 'loan').reduce((a, t) => a + t.amount, 0));
+    incomeData.push(monthTx.filter(t => t.type === 'income' || (t.type === 'loan' && !t.parcelaAtual)).reduce((a, t) => a + t.amount, 0));
+    expenseData.push(monthTx.filter(t => t.type === 'expense' || t.type === 'investment' || (t.type === 'loan' && t.parcelaAtual)).reduce((a, t) => a + t.amount, 0));
   }
 
   comparisonChart = new Chart(canvas, {
@@ -781,7 +787,7 @@ function updateTrendChart(colors) {
   const labels = [];
   const balanceData = [];
 
-  for (let i = 5; i >= 0; i--) {
+  for (let i = 11; i >= 0; i--) {
     let m = state.currentMonth - i;
     let y = state.currentYear;
     if (m < 0) { m += 12; y--; }
@@ -792,8 +798,8 @@ function updateTrendChart(colors) {
       return d.getMonth() === m && d.getFullYear() === y;
     });
 
-    const income = monthTx.filter(t => t.type === 'income').reduce((a, t) => a + t.amount, 0);
-    const expense = monthTx.filter(t => t.type === 'expense' || t.type === 'investment' || t.type === 'loan').reduce((a, t) => a + t.amount, 0);
+    const income = monthTx.filter(t => t.type === 'income' || (t.type === 'loan' && !t.parcelaAtual)).reduce((a, t) => a + t.amount, 0);
+    const expense = monthTx.filter(t => t.type === 'expense' || t.type === 'investment' || (t.type === 'loan' && t.parcelaAtual)).reduce((a, t) => a + t.amount, 0);
     balanceData.push(income - expense);
   }
 
@@ -852,7 +858,7 @@ function updateTrendChart(colors) {
 // ===== Render Transactions =====
 function createTransactionHTML(t) {
   const cat = getCategory(t.category);
-  const isIncome = t.type === 'income';
+  const isIncome = t.type === 'income' || (t.type === 'loan' && !t.parcelaAtual);
   const amountClass = isIncome ? 'income' : 'expense';
   const amountPrefix = isIncome ? '+ ' : '- ';
   const parcelasInfo = (t.parcelas && t.parcelaAtual) ? ` (${t.parcelaAtual}/${t.parcelas})` : (t.parcelas ? ` (${t.parcelas} parcelas)` : '');
@@ -1037,7 +1043,7 @@ function saveNewCategoryFromModal() {
 // ===== Reports =====
 function updateReports() {
   const transactions = getFilteredTransactions();
-  const expenses = transactions.filter(t => t.type === 'expense' || t.type === 'investment' || t.type === 'loan');
+  const expenses = transactions.filter(t => t.type === 'expense' || t.type === 'investment' || (t.type === 'loan' && t.parcelaAtual));
 
   // Average daily
   const totalExpense = expenses.reduce((a, t) => a + t.amount, 0);
@@ -1062,35 +1068,6 @@ function updateReports() {
   });
   const topCat = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0];
   document.getElementById('topCategory').textContent = topCat ? getCategory(topCat[0]).name : '-';
-
-  // Budget progress
-  renderBudgetProgress(catTotals);
-}
-
-function renderBudgetProgress(catTotals) {
-  const container = document.getElementById('budgetList');
-  const allCats = getAllCategories();
-  const budgetCats = Object.entries(allCats).filter(([, v]) => v.budget > 0);
-
-  container.innerHTML = budgetCats.map(([key, cat]) => {
-    const spent = catTotals[key] || 0;
-    const pct = cat.budget > 0 ? Math.min((spent / cat.budget) * 100, 100) : 0;
-    let barColor = cat.color;
-    if (pct > 90) barColor = '#ef4444';
-    else if (pct > 70) barColor = '#f59e0b';
-
-    return `
-      <div class="budget-item">
-        <div class="budget-item-header">
-          <span>${cat.emoji} ${cat.name}</span>
-          <span class="budget-values">${formatCurrency(spent)} / ${formatCurrency(cat.budget)}</span>
-        </div>
-        <div class="progress-bar">
-          <div class="progress-fill" style="width: ${pct}%; background: ${barColor};"></div>
-        </div>
-      </div>
-    `;
-  }).join('');
 }
 
 // ===== Modal =====
@@ -1119,6 +1096,7 @@ function openModal(editId) {
       document.getElementById('modalCategory').value = t.category;
       document.getElementById('modalNotes').value = t.notes || '';
       if (document.getElementById('modalParcelasTotal')) document.getElementById('modalParcelasTotal').value = t.parcelas || '';
+      if (document.getElementById('modalParcelaValor')) document.getElementById('modalParcelaValor').value = t.parcelaValor || '';
       if (document.getElementById('modalParcelaAtual')) document.getElementById('modalParcelaAtual').value = t.parcelaAtual || '';
       setModalType(t.type);
       if (isLoanCategory(t.category)) {
@@ -1201,30 +1179,72 @@ function saveTransaction() {
     return;
   }
 
-  let parcelas, parcelaAtual;
-  if (isLoanCategory(category)) {
+  let parcelas, parcelaAtual, parcelaValor;
+  if (isLoanCategory(category) || type === 'loan') {
     parcelas = parseInt(document.getElementById('modalParcelasTotal')?.value, 10) || null;
+    parcelaValor = parseFloat(document.getElementById('modalParcelaValor')?.value) || null;
     parcelaAtual = parseInt(document.getElementById('modalParcelaAtual')?.value, 10) || null;
   }
+
+  // Se for Empréstimo, mantemos o tipo 'loan' para filtragem, mas a lógica de cálculo (income/expense) 
+  // será baseada na presença de 'parcelaAtual'
+  const finalType = type; 
 
   if (state.editingId) {
     const idx = state.transactions.findIndex(t => t.id === state.editingId);
     if (idx !== -1) {
-      state.transactions[idx] = { ...state.transactions[idx], name, amount, date, category, notes, type, parcelas: parcelas || undefined, parcelaAtual: parcelaAtual || undefined };
+      state.transactions[idx] = { 
+        ...state.transactions[idx], 
+        name, 
+        amount, 
+        date, 
+        category, 
+        notes, 
+        type: finalType, 
+        parcelas: parcelas || undefined, 
+        parcelaValor: parcelaValor || undefined,
+        parcelaAtual: parcelaAtual || undefined 
+      };
       showToast('Transação atualizada com sucesso!', 'success');
     }
   } else {
+    // Nova Transação
     state.transactions.push({
       id: Date.now(),
       name,
       amount,
-      type,
+      type: finalType,
       category,
       date,
       notes,
       parcelas: parcelas || undefined,
+      parcelaValor: parcelaValor || undefined,
       parcelaAtual: parcelaAtual || undefined,
     });
+
+    // Lógica para gerar parcelas automáticas de empréstimo
+    if (type === 'loan' && parcelas > 0 && parcelaValor > 0) {
+      const startDate = new Date(date + 'T00:00:00');
+      for (let i = 1; i <= parcelas; i++) {
+        const nextMonth = new Date(startDate);
+        nextMonth.setMonth(startDate.getMonth() + i);
+        
+        const dateStr = `${nextMonth.getFullYear()}-${pad(nextMonth.getMonth() + 1)}-${pad(nextMonth.getDate())}`;
+        
+        state.transactions.push({
+          id: Date.now() + i, // Unique enough for this batch
+          name: `${name} (Parc. ${i}/${parcelas})`,
+          amount: parcelaValor,
+          type: 'loan', // Mantém tipo loan para as parcelas também
+          category: category,
+          date: dateStr,
+          notes: `Parcela gerada automaticamente do empréstimo "${name}"`,
+          parcelas: parcelas,
+          parcelaAtual: i,
+          parcelaValor: parcelaValor
+        });
+      }
+    }
     showToast('Transação adicionada com sucesso!', 'success');
   }
 
@@ -1262,23 +1282,51 @@ function handlePageFormSubmit(e) {
     return;
   }
 
-  let parcelas, parcelaAtual;
-  if (isLoanCategory(category)) {
+  let parcelas, parcelaAtual, parcelaValor;
+  if (isLoanCategory(category) || type === 'loan') {
     parcelas = parseInt(document.getElementById('pageParcelasTotal')?.value, 10) || null;
+    parcelaValor = parseFloat(document.getElementById('pageParcelaValor')?.value) || null;
     parcelaAtual = parseInt(document.getElementById('pageParcelaAtual')?.value, 10) || null;
   }
+
+  const finalType = type;
 
   state.transactions.push({
     id: Date.now(),
     name,
     amount,
-    type,
+    type: finalType,
     category,
     date,
     notes,
     parcelas: parcelas || undefined,
+    parcelaValor: parcelaValor || undefined,
     parcelaAtual: parcelaAtual || undefined,
   });
+
+  // Lógica para gerar parcelas automáticas de empréstimo (Novo registro página)
+  if (type === 'loan' && parcelas > 0 && parcelaValor > 0) {
+    const startDate = new Date(date + 'T00:00:00');
+    for (let i = 1; i <= parcelas; i++) {
+      const nextMonth = new Date(startDate);
+      nextMonth.setMonth(startDate.getMonth() + i);
+      
+      const dateStr = `${nextMonth.getFullYear()}-${pad(nextMonth.getMonth() + 1)}-${pad(nextMonth.getDate())}`;
+      
+      state.transactions.push({
+        id: Date.now() + i,
+        name: `${name} (Parc. ${i}/${parcelas})`,
+        amount: parcelaValor,
+        type: 'loan',
+        category: category,
+        date: dateStr,
+        notes: `Parcela gerada automaticamente do empréstimo "${name}"`,
+        parcelas: parcelas,
+        parcelaAtual: i,
+        parcelaValor: parcelaValor
+      });
+    }
+  }
 
   saveData();
   showToast('Transação adicionada com sucesso!', 'success');

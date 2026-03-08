@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
         content="Dashboard de Gastos Mensais - Controle suas finanças pessoais com gráficos interativos e categorias detalhadas">
-    <title>GestaoFinanceiraGu - Dashboard de Gastos</title>
+    <title>Dashboard de Gastos</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -24,7 +24,7 @@
                     <i class="ri-money-dollar-circle-line"></i>
                 </div>
                 <div class="sidebar-brand">
-                    <h1>GestaoFinanceiraGu</h1>
+                    <h1>Gestão Financeira</h1>
                 </div>
             </div>
 
@@ -224,13 +224,16 @@
                             <div class="form-group">
                                 <label for="pageType">Tipo</label>
                                 <div class="type-toggle type-toggle-four">
-                                    <button type="button" class="type-btn income-type" data-type="income" id="pageTypeIncome">
+                                    <button type="button" class="type-btn income-type" data-type="income"
+                                        id="pageTypeIncome">
                                         <i class="ri-arrow-up-circle-line"></i> Receita
                                     </button>
-                                    <button type="button" class="type-btn investment-type" data-type="investment" id="pageTypeInvestment">
+                                    <button type="button" class="type-btn investment-type" data-type="investment"
+                                        id="pageTypeInvestment">
                                         <i class="ri-line-chart-line"></i> Investimento
                                     </button>
-                                    <button type="button" class="type-btn expense-type active" data-type="expense" id="pageTypeExpense">
+                                    <button type="button" class="type-btn expense-type active" data-type="expense"
+                                        id="pageTypeExpense">
                                         <i class="ri-arrow-down-circle-line"></i> Despesa
                                     </button>
                                     <button type="button" class="type-btn loan-type" data-type="loan" id="pageTypeLoan">
@@ -259,15 +262,29 @@
                                 <select class="form-control" id="pageCategory" required>
                                     <option value="">Selecione uma categoria</option>
                                 </select>
-                                <div class="form-group" id="pageNovaCategoriaWrap" style="display: none; margin-top: 8px;">
+                                <div class="form-group" id="pageNovaCategoriaWrap"
+                                    style="display: none; margin-top: 8px;">
                                     <label for="pageNovaCategoriaNome">Nome da nova categoria</label>
-                                    <input type="text" class="form-control" id="pageNovaCategoriaNome" placeholder="Ex: Academia, Streaming...">
+                                    <input type="text" class="form-control" id="pageNovaCategoriaNome"
+                                        placeholder="Ex: Academia, Streaming...">
                                 </div>
                                 <div class="form-group" id="pageParcelasWrap" style="display: none; margin-top: 8px;">
-                                    <label for="pageParcelasTotal">Quantidade de parcelas</label>
-                                    <input type="number" class="form-control" id="pageParcelasTotal" placeholder="Ex: 12" min="1" max="999">
-                                    <label for="pageParcelaAtual" style="margin-top: 6px;">Parcela atual (opcional)</label>
-                                    <input type="number" class="form-control" id="pageParcelaAtual" placeholder="Ex: 1" min="1" max="999">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                        <div>
+                                            <label for="pageParcelasTotal">Quantidade</label>
+                                            <input type="number" class="form-control" id="pageParcelasTotal"
+                                                placeholder="Ex: 10" min="1" max="999">
+                                        </div>
+                                        <div>
+                                            <label for="pageParcelaValor">Valor da Parcela</label>
+                                            <input type="number" class="form-control" id="pageParcelaValor"
+                                                placeholder="720,00" step="0.01">
+                                        </div>
+                                    </div>
+                                    <label for="pageParcelaAtual" style="margin-top: 6px;">Parcela atual
+                                        (opcional)</label>
+                                    <input type="number" class="form-control" id="pageParcelaAtual" placeholder="Ex: 1"
+                                        min="1" max="999">
                                 </div>
                             </div>
                             <div class="form-group">
@@ -330,15 +347,6 @@
                         </div>
                     </div>
 
-                    <!-- Budget Progress -->
-                    <div class="budget-section">
-                        <div class="budget-header">
-                            <h3>Orçamento por Categoria</h3>
-                        </div>
-                        <div id="budgetList">
-                            <!-- Populated by JS -->
-                        </div>
-                    </div>
                 </section>
                 <!-- ===== SETTINGS / BACKUP PAGE ===== -->
                 <section class="page-section" id="page-settings">
@@ -398,7 +406,8 @@
                                 Limpar Todas as Informações
                             </h4>
                             <p style="color: var(--text-muted); margin-bottom: 16px; font-size: 14px;">
-                                Esta ação irá remover permanentemente todas as transações, categorias personalizadas e configurações. Esta ação não pode ser desfeita.
+                                Esta ação irá remover permanentemente todas as transações, categorias personalizadas e
+                                configurações. Esta ação não pode ser desfeita.
                             </p>
                             <button class="btn btn-danger" id="btnClearAllData">
                                 <i class="ri-delete-bin-line"></i> Limpar Tudo
@@ -431,10 +440,12 @@
                             <button type="button" class="type-btn income-type" data-type="income" id="modalTypeIncome">
                                 <i class="ri-arrow-up-circle-line"></i> Receita
                             </button>
-                            <button type="button" class="type-btn investment-type" data-type="investment" id="modalTypeInvestment">
+                            <button type="button" class="type-btn investment-type" data-type="investment"
+                                id="modalTypeInvestment">
                                 <i class="ri-line-chart-line"></i> Investimento
                             </button>
-                            <button type="button" class="type-btn expense-type active" data-type="expense" id="modalTypeExpense">
+                            <button type="button" class="type-btn expense-type active" data-type="expense"
+                                id="modalTypeExpense">
                                 <i class="ri-arrow-down-circle-line"></i> Despesa
                             </button>
                             <button type="button" class="type-btn loan-type" data-type="loan" id="modalTypeLoan">
@@ -465,13 +476,25 @@
                         </select>
                         <div class="form-group" id="modalNovaCategoriaWrap" style="display: none; margin-top: 8px;">
                             <label for="modalNovaCategoriaNome">Nome da nova categoria</label>
-                            <input type="text" class="form-control" id="modalNovaCategoriaNome" placeholder="Ex: Academia, Streaming...">
+                            <input type="text" class="form-control" id="modalNovaCategoriaNome"
+                                placeholder="Ex: Academia, Streaming...">
                         </div>
                         <div class="form-group" id="modalParcelasWrap" style="display: none; margin-top: 8px;">
-                            <label for="modalParcelasTotal">Quantidade de parcelas</label>
-                            <input type="number" class="form-control" id="modalParcelasTotal" placeholder="Ex: 12" min="1" max="999">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div>
+                                    <label for="modalParcelasTotal">Quantidade</label>
+                                    <input type="number" class="form-control" id="modalParcelasTotal" placeholder="Ex: 10"
+                                        min="1" max="999">
+                                </div>
+                                <div>
+                                    <label for="modalParcelaValor">Valor da Parcela</label>
+                                    <input type="number" class="form-control" id="modalParcelaValor"
+                                        placeholder="720,00" step="0.01">
+                                </div>
+                            </div>
                             <label for="modalParcelaAtual" style="margin-top: 6px;">Parcela atual (opcional)</label>
-                            <input type="number" class="form-control" id="modalParcelaAtual" placeholder="Ex: 1" min="1" max="999">
+                            <input type="number" class="form-control" id="modalParcelaAtual" placeholder="Ex: 1" min="1"
+                                max="999">
                         </div>
                     </div>
                     <div class="form-group">
@@ -518,7 +541,8 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label for="newCategoryName">Nome da categoria</label>
-                    <input type="text" class="form-control" id="newCategoryName" placeholder="Ex: Academia, Streaming...">
+                    <input type="text" class="form-control" id="newCategoryName"
+                        placeholder="Ex: Academia, Streaming...">
                 </div>
                 <div class="form-group">
                     <label>Tipo</label>
@@ -529,7 +553,8 @@
                         <button type="button" class="type-btn expense-type active" data-type="expense" title="Despesa">
                             <i class="ri-arrow-down-circle-line"></i> Despesa
                         </button>
-                        <button type="button" class="type-btn investment-type" data-type="investment" title="Investimento">
+                        <button type="button" class="type-btn investment-type" data-type="investment"
+                            title="Investimento">
                             <i class="ri-line-chart-line"></i> Investimento
                         </button>
                         <button type="button" class="type-btn loan-type" data-type="loan" title="Empréstimo">
