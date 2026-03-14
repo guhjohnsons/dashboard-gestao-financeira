@@ -1,4 +1,4 @@
-# 📊 Dashboard de Gestão Financeira]
+# 📊 Dashboard de Gestão Financeira
 
 
 Este é um projeto de **Gestão Financeira Pessoal** que funciona inteiramente no navegador. Desenvolvido com HTML, CSS puro e JavaScript moderno, não requer banco de dados externo ou backend, utilizando o `localStorage` do navegador para prover uma experiência rápida, segura e privada do usuário. O layout apresenta um design moderno e premium com suporte nativo a temas (Claro e Escuro).
