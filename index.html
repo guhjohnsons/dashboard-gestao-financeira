@@ -46,6 +46,10 @@
                     <i class="ri-folder-chart-line"></i>
                     Categorias
                 </button>
+                <button class="nav-item" data-page="budgets" id="nav-budgets">
+                    <i class="ri-wallet-3-line"></i>
+                    Orçamentos
+                </button>
 
                 <span class="nav-section-label">Análises</span>
                 <button class="nav-item" data-page="reports" id="nav-reports">
@@ -77,6 +81,7 @@
                         <i class="ri-menu-line"></i>
                     </button>
                     <div class="header-left">
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:-4px;" id="greetingText">Olá, bem-vindo!</div>
                         <h2 id="pageTitle">Dashboard</h2>
                         <p id="pageSubtitle">Visão geral das suas finanças</p>
                     </div>
@@ -95,6 +100,7 @@
                             <i class="ri-arrow-right-s-line"></i>
                         </button>
                     </div>
+                    <button class="btn btn-outline" id="btnToday" style="font-size: 13px; font-weight: 600; padding: 0 12px; height: 38px;">Hoje</button>
                     <button class="btn btn-primary" id="btnAddNew" type="button">
                         <i class="ri-add-line"></i>
                         <span class="btn-text-desktop">Adicionar</span>
@@ -161,8 +167,19 @@
                         </div>
                     </div>
 
-                    <!-- Charts -->
-                    <div class="charts-grid">
+                    <!-- Botões de Acesso Rápido -->
+                    <div style="margin-bottom: 28px;">
+                        <div style="display:flex; gap:12px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none;" class="quick-actions-bar">
+                            <span style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:flex; align-items:center; padding-right:8px;">Atalhos:</span>
+                            <button class="filter-chip quick-action-btn" data-qa-type="income"><i class="ri-arrow-up-circle-line" style="margin-right:6px;"></i>Receita</button>
+                            <button class="filter-chip quick-action-btn" data-qa-type="investment"><i class="ri-line-chart-line" style="margin-right:6px;"></i>Investimento</button>
+                            <button class="filter-chip quick-action-btn" data-qa-type="expense"><i class="ri-arrow-down-circle-line" style="margin-right:6px;"></i>Despesa</button>
+                            <button class="filter-chip quick-action-btn" data-qa-type="loan"><i class="ri-hand-coin-line" style="margin-right:6px;"></i>Empréstimo</button>
+                        </div>
+                    </div>
+
+                    <!-- Charts & Budgets -->
+                    <div class="charts-grid dashboard-middle-grid">
                         <div class="chart-card">
                             <div class="chart-card-header">
                                 <h3 id="dailyChartTitle">Despesas Diárias</h3>
@@ -179,6 +196,15 @@
                             </div>
                             <div class="chart-container">
                                 <canvas id="categoryChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="budget-section quick-budgets-section">
+                            <div class="budget-header">
+                                <h3>Metas do Mês</h3>
+                                <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="navigateTo('budgets')">Ver metas</button>
+                            </div>
+                            <div id="quickBudgetsList" style="display:flex;flex-direction:column;gap:16px;">
+                                <!-- pop JS -->
                             </div>
                         </div>
                     </div>
@@ -202,12 +228,18 @@
                     <div class="transactions-section">
                         <div class="transactions-header">
                             <h3>Todas as Transações</h3>
-                            <div class="transactions-filters">
-                                <button class="filter-chip active" data-filter="all">Todas</button>
-                                <button class="filter-chip" data-filter="income">Receitas</button>
-                                <button class="filter-chip" data-filter="expense">Despesas</button>
-                                <button class="filter-chip" data-filter="investment">Investimentos</button>
-                                <button class="filter-chip" data-filter="loan">Empréstimos</button>
+                            <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end;">
+                                <div class="search-bar-wrap">
+                                    <i class="ri-search-line"></i>
+                                    <input type="text" id="transactionSearch" class="search-input" placeholder="Buscar por descrição...">
+                                </div>
+                                <div class="transactions-filters">
+                                    <button class="filter-chip active" data-filter="all">Todas</button>
+                                    <button class="filter-chip" data-filter="income">Receitas</button>
+                                    <button class="filter-chip" data-filter="expense">Despesas</button>
+                                    <button class="filter-chip" data-filter="investment">Investimentos</button>
+                                    <button class="filter-chip" data-filter="loan">Empréstimos</button>
+                                </div>
                             </div>
                         </div>
                         <div class="transactions-list" id="allTransactions">
@@ -306,13 +338,28 @@
                     </div>
                 </section>
 
+                <!-- ===== BUDGETS PAGE ===== -->
+                <section class="page-section" id="page-budgets">
+                    <div class="transactions-header" style="background:var(--bg-card);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding-bottom:12px;margin-bottom:20px;border-bottom:none;">
+                        <div>
+                            <h3 style="margin-bottom:8px;"><i class="ri-target-line" style="color:var(--accent-primary);margin-right:8px;"></i>Metas de Gastos</h3>
+                            <p style="font-size:13px;color:var(--text-muted);">Defina limites de gastos para suas categorias (Apenas para Despesas).</p>
+                        </div>
+                    </div>
+
+                    <div class="budget-cards-grid" id="budgetSetupGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;">
+                        <!-- pop JS -->
+                    </div>
+                </section>
+
                 <!-- ===== REPORTS PAGE ===== -->
                 <section class="page-section" id="page-reports">
-                    <div class="stats-mini-grid">
+                    <!-- KPI Cards -->
+                    <div class="stats-mini-grid reports-kpi-grid">
                         <div class="stat-mini-card">
                             <i class="ri-calendar-check-line" style="color: var(--accent-primary);"></i>
                             <div class="stat-value" id="avgDaily">R$ 0,00</div>
-                            <div class="stat-label">Média Diária</div>
+                            <div class="stat-label">Média Diária de Gastos</div>
                         </div>
                         <div class="stat-mini-card">
                             <i class="ri-fire-line" style="color: var(--color-expense);"></i>
@@ -324,25 +371,149 @@
                             <div class="stat-value" id="topCategory">-</div>
                             <div class="stat-label">Top Categoria</div>
                         </div>
+                        <div class="stat-mini-card">
+                            <i class="ri-percent-line" style="color: var(--color-income);"></i>
+                            <div class="stat-value" id="savingsRate">0%</div>
+                            <div class="stat-label">Taxa de Poupança</div>
+                        </div>
+                        <div class="stat-mini-card">
+                            <i class="ri-line-chart-line" style="color: #3b82f6;"></i>
+                            <div class="stat-value" id="totalInvestmentReport">R$ 0,00</div>
+                            <div class="stat-label">Total Investido</div>
+                        </div>
+                        <div class="stat-mini-card">
+                            <i class="ri-list-check-3" style="color: var(--accent-primary);"></i>
+                            <div class="stat-value" id="totalTransactionsReport">0</div>
+                            <div class="stat-label">Total Transações</div>
+                        </div>
                     </div>
 
-                    <div class="charts-grid">
-                        <div class="chart-card">
-                            <div class="chart-card-header">
-                                <h3>Receita vs Despesa</h3>
-                                <span class="badge">Comparativo</span>
+                    <!-- Report Tabs -->
+                    <div class="report-tabs-wrapper">
+                        <div class="report-tabs" id="reportTabs">
+                            <button class="report-tab active" data-tab="overview">
+                                <i class="ri-pie-chart-line"></i> Visão Geral
+                            </button>
+                            <button class="report-tab" data-tab="trend">
+                                <i class="ri-line-chart-line"></i> Evolução
+                            </button>
+                            <button class="report-tab" data-tab="categories">
+                                <i class="ri-bar-chart-horizontal-line"></i> Categorias
+                            </button>
+                            <button class="report-tab" data-tab="topexpenses">
+                                <i class="ri-fire-line"></i> Maiores Gastos
+                            </button>
+                            <button class="report-tab" data-tab="investments">
+                                <i class="ri-funds-line"></i> Investimentos
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Overview -->
+                    <div class="report-tab-content active" id="report-tab-overview">
+                        <div class="charts-grid charts-grid-equal">
+                            <div class="chart-card">
+                                <div class="chart-card-header">
+                                    <h3>Receita vs Despesa</h3>
+                                    <span class="badge">Últimos 12 meses</span>
+                                </div>
+                                <div class="chart-container">
+                                    <canvas id="comparisonChart"></canvas>
+                                </div>
                             </div>
-                            <div class="chart-container">
-                                <canvas id="comparisonChart"></canvas>
+                            <div class="chart-card">
+                                <div class="chart-card-header">
+                                    <h3>Distribuição de Gastos</h3>
+                                    <span class="badge">Por Tipo</span>
+                                </div>
+                                <div class="chart-container">
+                                    <canvas id="typeDistributionChart"></canvas>
+                                </div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Tab: Trend -->
+                    <div class="report-tab-content" id="report-tab-trend">
+                        <div class="charts-grid-single">
+                            <div class="chart-card">
+                                <div class="chart-card-header">
+                                    <h3>Evolução do Saldo Mensal</h3>
+                                    <span class="badge">Tendência</span>
+                                </div>
+                                <div class="chart-container chart-container-tall">
+                                    <canvas id="trendChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-card" style="margin-top: 20px;">
+                                <div class="chart-card-header">
+                                    <h3>Saldo Acumulado</h3>
+                                    <span class="badge">Patrimônio</span>
+                                </div>
+                                <div class="chart-container chart-container-tall">
+                                    <canvas id="cumulativeChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Categories -->
+                    <div class="report-tab-content" id="report-tab-categories">
+                        <div class="charts-grid charts-grid-equal">
+                            <div class="chart-card">
+                                <div class="chart-card-header">
+                                    <h3>Gastos por Categoria</h3>
+                                    <span class="badge">Ranking</span>
+                                </div>
+                                <div class="chart-container chart-container-tall">
+                                    <canvas id="categoryRankingChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-card">
+                                <div class="chart-card-header">
+                                    <h3>Tabela Detalhada</h3>
+                                    <span class="badge">Por Categoria</span>
+                                </div>
+                                <div class="report-table-wrapper" id="categoryTableWrapper">
+                                    <!-- populated by JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Top Expenses -->
+                    <div class="report-tab-content" id="report-tab-topexpenses">
                         <div class="chart-card">
                             <div class="chart-card-header">
-                                <h3>Evolução Mensal</h3>
-                                <span class="badge">Tendência</span>
+                                <h3>Top 10 Maiores Despesas</h3>
+                                <span class="badge">No período selecionado</span>
                             </div>
-                            <div class="chart-container">
-                                <canvas id="trendChart"></canvas>
+                            <div class="report-table-wrapper" id="topExpensesTable">
+                                <!-- populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Investments -->
+                    <div class="report-tab-content" id="report-tab-investments">
+                        <div class="charts-grid charts-grid-equal">
+                            <div class="chart-card">
+                                <div class="chart-card-header">
+                                    <h3>Investimentos por Categoria</h3>
+                                    <span class="badge">Alocação</span>
+                                </div>
+                                <div class="chart-container">
+                                    <canvas id="investmentAllocationChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-card">
+                                <div class="chart-card-header">
+                                    <h3>Histórico de Investimentos</h3>
+                                    <span class="badge">Mensal</span>
+                                </div>
+                                <div class="chart-container">
+                                    <canvas id="investmentHistoryChart"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>

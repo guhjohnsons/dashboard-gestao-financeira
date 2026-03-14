@@ -27,7 +27,9 @@ const CATEGORIES = {
   emprestimo_3: { name: 'Emprestimo 3', icon: 'ri-hand-coin-line', emoji: '📋', color: '#b91c1c', budget: 0, type: 'loan', isLoan: true },
 };
 const CUSTOM_CATEGORIES_KEY = 'gestaofinanceiragu_custom_categories';
+const BUDGETS_KEY = 'gestaofinanceiragu_budgets';
 let customCategories = {}; // { id: { name, icon, emoji, color, budget, type } }
+let defaultBudgets = {}; // { id: amount }
 
 const MONTH_NAMES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -79,14 +81,27 @@ function loadData() {
       customCategories = {};
     }
   }
+  const savedBudgets = localStorage.getItem(BUDGETS_KEY);
+  if (savedBudgets) {
+    try {
+      defaultBudgets = JSON.parse(savedBudgets);
+    } catch (_) {
+      defaultBudgets = {};
+    }
+  }
 }
 
 function getAllCategories() {
-  return { ...CATEGORIES, ...customCategories };
+  const merged = { ...CATEGORIES };
+  Object.keys(merged).forEach(k => {
+    if (defaultBudgets[k] !== undefined) merged[k].budget = defaultBudgets[k];
+  });
+  return { ...merged, ...customCategories };
 }
 
 function getCategory(key) {
-  return CATEGORIES[key] || customCategories[key] || CATEGORIES.others;
+  const all = getAllCategories();
+  return all[key] || all.others;
 }
 
 function isLoanCategory(key) {
@@ -261,6 +276,14 @@ function setupEventListeners() {
   // Month/Year Navigation
   document.getElementById('prevMonth').addEventListener('click', () => changePeriod(-1));
   document.getElementById('nextMonth').addEventListener('click', () => changePeriod(1));
+  const btnToday = document.getElementById('btnToday');
+  if (btnToday) {
+    btnToday.addEventListener('click', () => {
+      state.currentMonth = new Date().getMonth();
+      state.currentYear = new Date().getFullYear();
+      updateAll();
+    });
+  }
 
   // View Mode Toggle
   document.getElementById('viewMonth').addEventListener('click', () => setViewMode('month'));
@@ -329,6 +352,15 @@ function setupEventListeners() {
     });
   });
 
+  // Search
+  const searchInput = document.getElementById('transactionSearch');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      state.searchQuery = searchInput.value.toLowerCase().trim();
+      renderAllTransactions();
+    });
+  }
+
   // Mobile sidebar
   document.getElementById('btnMobileMenu').addEventListener('click', toggleMobileSidebar);
   document.getElementById('sidebarOverlay').addEventListener('click', closeMobileSidebar);
@@ -341,6 +373,38 @@ function setupEventListeners() {
       closeNewCategoryModal();
       closeMobileSidebar();
     }
+  });
+
+  // Report Tabs
+  document.querySelectorAll('.report-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const tabId = tab.dataset.tab;
+      document.querySelectorAll('.report-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.report-tab-content').forEach(c => c.classList.remove('active'));
+      tab.classList.add('active');
+      const content = document.getElementById(`report-tab-${tabId}`);
+      if (content) content.classList.add('active');
+      // Re-render charts for the newly visible tab
+      updateCharts();
+    });
+  });
+
+  // Quick Actions
+  document.querySelectorAll('.quick-action-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const type = btn.dataset.qaType;
+      const catName = btn.dataset.qaName;
+      openModal();
+      setModalType(type);
+      if (catName) {
+        document.getElementById('modalName').value = catName;
+        const allCats = getAllCategories();
+        const catEntry = Object.entries(allCats).find(([,c]) => c.name === catName);
+        if(catEntry) {
+          document.getElementById('modalCategory').value = catEntry[0];
+        }
+      }
+    });
   });
 
   // Settings / Backup
@@ -377,6 +441,7 @@ function navigateTo(page) {
     transactions: ['Transações', 'Histórico completo de movimentações'],
     'add-expense': ['Novo Registro', 'Cadastre uma nova transação'],
     categories: ['Categorias', 'Gastos organizados por categoria'],
+    budgets: ['Orçamentos', 'Acompanhe as metas e limites de gastos por categoria'],
     reports: ['Relatórios', 'Análises detalhadas das suas finanças'],
     settings: ['Configurações', 'Backup e exportação de dados'],
   };
@@ -462,6 +527,16 @@ function updateAll() {
   renderAllTransactions();
   renderCategories();
   updateReports();
+  if (typeof renderBudgets === 'function') renderBudgets();
+
+  const greetText = document.getElementById('greetingText');
+  if (greetText) {
+    const hr = new Date().getHours();
+    let msg = 'Bom dia';
+    if (hr >= 12 && hr < 18) msg = 'Boa tarde';
+    else if (hr >= 18) msg = 'Boa noite';
+    greetText.textContent = `${msg}, seja bem-vindo!`;
+  }
 }
 
 // ===== Summary Cards =====
@@ -501,6 +576,8 @@ function updateSummaryCards() {
 
 // ===== Charts =====
 let dailyChart, categoryChart, comparisonChart, trendChart;
+let typeDistributionChart, categoryRankingChart, cumulativeChart;
+let investmentAllocationChart, investmentHistoryChart;
 
 function getChartColors() {
   const isDark = state.theme === 'dark';
@@ -522,6 +599,11 @@ function updateCharts() {
   if (categoryChart) categoryChart.destroy();
   if (comparisonChart) comparisonChart.destroy();
   if (trendChart) trendChart.destroy();
+  if (typeDistributionChart) typeDistributionChart.destroy();
+  if (categoryRankingChart) categoryRankingChart.destroy();
+  if (cumulativeChart) cumulativeChart.destroy();
+  if (investmentAllocationChart) investmentAllocationChart.destroy();
+  if (investmentHistoryChart) investmentHistoryChart.destroy();
 
   updateDailyChart(transactions, colors);
   updateCategoryChart(transactions, colors);
@@ -529,6 +611,11 @@ function updateCharts() {
   if (state.currentPage === 'reports') {
     updateComparisonChart(transactions, colors);
     updateTrendChart(colors);
+    updateTypeDistributionChart(transactions, colors);
+    updateCumulativeChart(colors);
+    updateCategoryRankingChart(transactions, colors);
+    updateInvestmentAllocationChart(transactions, colors);
+    updateInvestmentHistoryChart(colors);
   }
 }
 
@@ -855,6 +942,253 @@ function updateTrendChart(colors) {
   });
 }
 
+// ===== Type Distribution Chart =====
+function updateTypeDistributionChart(transactions, colors) {
+  const canvas = document.getElementById('typeDistributionChart');
+  if (!canvas) return;
+
+  const expense = transactions.filter(t => t.type === 'expense').reduce((a, t) => a + t.amount, 0);
+  const investment = transactions.filter(t => t.type === 'investment').reduce((a, t) => a + t.amount, 0);
+  const loan = transactions.filter(t => t.type === 'loan' && t.parcelaAtual).reduce((a, t) => a + t.amount, 0);
+  const income = transactions.filter(t => t.type === 'income' || (t.type === 'loan' && !t.parcelaAtual)).reduce((a, t) => a + t.amount, 0);
+
+  const data = [income, expense, investment, loan].filter(v => v > 0);
+  const labels = ['Receitas', 'Despesas', 'Investimentos', 'Parcelas Empréstimo'].filter((_, i) => [income, expense, investment, loan][i] > 0);
+  const bgColors = ['#10b981', '#ef4444', '#3b82f6', '#dc2626'].filter((_, i) => [income, expense, investment, loan][i] > 0);
+
+  typeDistributionChart = new Chart(canvas, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: bgColors, borderWidth: 0, hoverOffset: 8 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '60%',
+      plugins: {
+        legend: { position: 'bottom', labels: { color: colors.textColor, font: { family: 'Inter', size: 11 }, padding: 12, boxWidth: 12, usePointStyle: true, pointStyle: 'circle' } },
+        tooltip: {
+          backgroundColor: colors.tooltipBg, titleColor: colors.tooltipText, bodyColor: colors.tooltipText,
+          borderColor: colors.tooltipBorder, borderWidth: 1, cornerRadius: 8, padding: 12,
+          callbacks: {
+            label: ctx => {
+              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              const pct = ((ctx.raw / total) * 100).toFixed(1);
+              return `${ctx.label}: ${formatCurrency(ctx.raw)} (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ===== Category Ranking Chart (horizontal bar) =====
+function updateCategoryRankingChart(transactions, colors) {
+  const canvas = document.getElementById('categoryRankingChart');
+  if (!canvas) return;
+
+  const expenses = transactions.filter(t => t.type === 'expense' || t.type === 'investment' || (t.type === 'loan' && t.parcelaAtual));
+  const catTotals = {};
+  expenses.forEach(t => { catTotals[t.category] = (catTotals[t.category] || 0) + t.amount; });
+
+  const sorted = Object.entries(catTotals).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const labels = sorted.map(([k]) => getCategory(k).name);
+  const data = sorted.map(([, v]) => v);
+  const bgColors = sorted.map(([k]) => getCategory(k).color || '#6b7280');
+
+  categoryRankingChart = new Chart(canvas, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Total', data, backgroundColor: bgColors.map(c => c + 'cc'), borderColor: bgColors, borderWidth: 1, borderRadius: 5 }] },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: colors.tooltipBg, titleColor: colors.tooltipText, bodyColor: colors.tooltipText,
+          borderColor: colors.tooltipBorder, borderWidth: 1, cornerRadius: 8, padding: 12,
+          callbacks: { label: ctx => `${formatCurrency(ctx.raw)}` }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: colors.gridColor },
+          ticks: { color: colors.textColor, font: { family: 'Inter', size: 10 }, callback: v => `R$${v}` },
+          beginAtZero: true
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: colors.textColor, font: { family: 'Inter', size: 11 } }
+        }
+      }
+    }
+  });
+}
+
+// ===== Cumulative Balance Chart =====
+function updateCumulativeChart(colors) {
+  const canvas = document.getElementById('cumulativeChart');
+  if (!canvas) return;
+
+  const labels = [];
+  const cumData = [];
+  let cumulative = 0;
+
+  for (let i = 11; i >= 0; i--) {
+    let m = state.currentMonth - i;
+    let y = state.currentYear;
+    if (m < 0) { m += 12; y--; }
+    labels.push(`${MONTH_NAMES[m].substring(0, 3)}/${String(y).slice(-2)}`);
+
+    const monthTx = state.transactions.filter(t => {
+      const d = new Date(t.date + 'T00:00:00');
+      return d.getMonth() === m && d.getFullYear() === y;
+    });
+
+    const income = monthTx.filter(t => t.type === 'income' || (t.type === 'loan' && !t.parcelaAtual)).reduce((a, t) => a + t.amount, 0);
+    const expense = monthTx.filter(t => t.type === 'expense' || t.type === 'investment' || (t.type === 'loan' && t.parcelaAtual)).reduce((a, t) => a + t.amount, 0);
+    cumulative += (income - expense);
+    cumData.push(cumulative);
+  }
+
+  cumulativeChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Saldo Acumulado',
+        data: cumData,
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16, 185, 129, 0.12)',
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: cumData.map(v => v >= 0 ? '#10b981' : '#ef4444'),
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: colors.textColor, font: { family: 'Inter', size: 11 }, boxWidth: 12 } },
+        tooltip: {
+          backgroundColor: colors.tooltipBg, titleColor: colors.tooltipText, bodyColor: colors.tooltipText,
+          borderColor: colors.tooltipBorder, borderWidth: 1, cornerRadius: 8, padding: 12,
+          callbacks: { label: ctx => `Acumulado: ${formatCurrency(ctx.raw)}` }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: colors.textColor, font: { family: 'Inter', size: 10 } } },
+        y: {
+          grid: { color: colors.gridColor },
+          ticks: { color: colors.textColor, font: { family: 'Inter', size: 10 }, callback: v => `R$${v}` }
+        }
+      }
+    }
+  });
+}
+
+// ===== Investment Allocation Chart =====
+function updateInvestmentAllocationChart(transactions, colors) {
+  const canvas = document.getElementById('investmentAllocationChart');
+  if (!canvas) return;
+
+  const investments = transactions.filter(t => t.type === 'investment');
+  const catTotals = {};
+  investments.forEach(t => { catTotals[t.category] = (catTotals[t.category] || 0) + t.amount; });
+
+  const sorted = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+  const labels = sorted.map(([k]) => getCategory(k).name);
+  const data = sorted.map(([, v]) => v);
+  const bgColors = sorted.map(([k]) => getCategory(k).color || '#3b82f6');
+
+  if (data.length === 0) {
+    canvas.parentElement.innerHTML = `<div class="empty-state" style="padding:40px 20px;"><i class="ri-funds-line" style="font-size:40px;color:var(--text-muted);opacity:0.4;margin-bottom:12px;"></i><h4>Sem investimentos</h4><p>Nenhum investimento no período selecionado.</p></div>`;
+    return;
+  }
+
+  investmentAllocationChart = new Chart(canvas, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: bgColors, borderWidth: 0, hoverOffset: 8 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '60%',
+      plugins: {
+        legend: { position: 'bottom', labels: { color: colors.textColor, font: { family: 'Inter', size: 11 }, padding: 12, boxWidth: 12, usePointStyle: true, pointStyle: 'circle' } },
+        tooltip: {
+          backgroundColor: colors.tooltipBg, titleColor: colors.tooltipText, bodyColor: colors.tooltipText,
+          borderColor: colors.tooltipBorder, borderWidth: 1, cornerRadius: 8, padding: 12,
+          callbacks: {
+            label: ctx => {
+              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              const pct = ((ctx.raw / total) * 100).toFixed(1);
+              return `${ctx.label}: ${formatCurrency(ctx.raw)} (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ===== Investment History Chart =====
+function updateInvestmentHistoryChart(colors) {
+  const canvas = document.getElementById('investmentHistoryChart');
+  if (!canvas) return;
+
+  const labels = [];
+  const invData = [];
+
+  for (let i = 11; i >= 0; i--) {
+    let m = state.currentMonth - i;
+    let y = state.currentYear;
+    if (m < 0) { m += 12; y--; }
+    labels.push(`${MONTH_NAMES[m].substring(0, 3)}`);
+
+    const monthTx = state.transactions.filter(t => {
+      const d = new Date(t.date + 'T00:00:00');
+      return d.getMonth() === m && d.getFullYear() === y;
+    });
+    invData.push(monthTx.filter(t => t.type === 'investment').reduce((a, t) => a + t.amount, 0));
+  }
+
+  investmentHistoryChart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Investimentos',
+        data: invData,
+        backgroundColor: 'rgba(59, 130, 246, 0.75)',
+        borderColor: '#3b82f6',
+        borderWidth: 1,
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: colors.textColor, font: { family: 'Inter', size: 11 }, boxWidth: 12, padding: 16 } },
+        tooltip: {
+          backgroundColor: colors.tooltipBg, titleColor: colors.tooltipText, bodyColor: colors.tooltipText,
+          borderColor: colors.tooltipBorder, borderWidth: 1, cornerRadius: 8, padding: 12,
+          callbacks: { label: ctx => `${formatCurrency(ctx.raw)}` }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: colors.textColor, font: { family: 'Inter', size: 11 } } },
+        y: {
+          grid: { color: colors.gridColor },
+          ticks: { color: colors.textColor, font: { family: 'Inter', size: 10 }, callback: v => `R$${v}` },
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+
 // ===== Render Transactions =====
 function createTransactionHTML(t) {
   const cat = getCategory(t.category);
@@ -917,13 +1251,20 @@ function renderAllTransactions() {
     transactions = transactions.filter(t => t.type === state.currentFilter);
   }
 
+  if (state.searchQuery) {
+    transactions = transactions.filter(t => t.name.toLowerCase().includes(state.searchQuery));
+  }
+
   if (transactions.length === 0) {
     const periodText = state.viewMode === 'year' ? 'ano' : 'mês';
+    let emptyMsg = `Não há transações para o filtro e ${periodText} selecionado.`;
+    if (state.searchQuery) emptyMsg = `Nenhuma transação encontrada com a busca "${state.searchQuery}".`;
+    
     container.innerHTML = `
       <div class="empty-state">
         <i class="ri-inbox-2-line"></i>
         <h4>Nenhuma transação encontrada</h4>
-        <p>Não há transações para o filtro e ${periodText} selecionado.</p>
+        <p>${emptyMsg}</p>
       </div>
     `;
     return;
@@ -1040,25 +1381,132 @@ function saveNewCategoryFromModal() {
   renderCategories();
 }
 
+// ===== Budgets =====
+function updateBudget(catKey, newBudget) {
+  if (isCustomCategory(catKey)) {
+    customCategories[catKey].budget = newBudget;
+    saveCustomCategories();
+  } else {
+    defaultBudgets[catKey] = newBudget;
+    localStorage.setItem(BUDGETS_KEY, JSON.stringify(defaultBudgets));
+  }
+  updateAll();
+  showToast('Orçamento atualizado.', 'success');
+}
+
+function renderBudgets() {
+  const setupGrid = document.getElementById('budgetSetupGrid');
+  const quickList = document.getElementById('quickBudgetsList');
+  if (!setupGrid && !quickList) return;
+
+  const transactions = getFilteredTransactions();
+  const expenses = transactions.filter(t => t.type === 'expense');
+  
+  const catTotals = {};
+  expenses.forEach(t => { catTotals[t.category] = (catTotals[t.category] || 0) + t.amount; });
+
+  const allCats = getAllCategories();
+  const expenseCats = Object.entries(allCats).filter(([, v]) => v.type === 'expense' || !v.type);
+  
+  // Setup Grid Html
+  if (setupGrid) {
+    let setupHtml = '';
+    expenseCats.forEach(([key, cat]) => {
+      if (key === 'others') return;
+      const total = catTotals[key] || 0;
+      const budget = cat.budget || 0;
+      let pct = budget > 0 ? (total / budget) * 100 : 0;
+      let colorClass = pct > 100 ? 'var(--color-danger)' : pct > 80 ? 'var(--color-warning)' : 'var(--color-income)';
+      
+      setupHtml += `
+        <div class="budget-card">
+          <div class="budget-card-header">
+            <div class="budget-icon" style="background:${cat.color}20;color:${cat.color};">
+              <i class="${cat.icon}"></i>
+            </div>
+            <div>
+              <h4 style="font-size:15px;">${cat.name}</h4>
+              <p style="font-size:12px;color:var(--text-muted);">Gasto atual: ${formatCurrency(total)}</p>
+            </div>
+          </div>
+          
+          <div style="margin-top:4px;">
+            <div class="budget-info">
+              <span>Progresso</span>
+              <span style="color:${colorClass}">${pct.toFixed(0)}%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width:${Math.min(pct, 100)}%; background:${colorClass};"></div>
+            </div>
+          </div>
+
+          <div class="budget-input-group">
+            <span>R$</span>
+            <input type="number" 
+                   value="${budget}"
+                   placeholder="Defina o meta mensal"
+                   onchange="updateBudget('${key}', parseFloat(this.value) || 0)" />
+          </div>
+        </div>
+      `;
+    });
+    setupGrid.innerHTML = setupHtml;
+  }
+
+  // Quick List (Dashboard)
+  if (quickList) {
+    const catsWithBudget = expenseCats.filter(([, c]) => c.budget && c.budget > 0);
+    if (catsWithBudget.length === 0) {
+      quickList.innerHTML = `<p style="font-size:13px;color:var(--text-muted);text-align:center;padding:10px 0;">Nenhuma meta definida. Vá em <button onclick="navigateTo('budgets')" style="background:none;border:none;color:var(--accent-primary);cursor:pointer;font-weight:600;padding:0;">Orçamentos</button> para criar.</p>`;
+      return;
+    }
+    
+    // Sort by most used (highest %)
+    const sorted = catsWithBudget.map(([key, cat]) => {
+      const t = catTotals[key] || 0;
+      const b = cat.budget || 1;
+      return { key, cat, t, b, pct: (t / b) * 100 };
+    }).sort((a, b) => b.pct - a.pct).slice(0, 3);
+
+    let quickHtml = '';
+    sorted.forEach(({ cat, t, b, pct }) => {
+      let cClass = pct > 100 ? 'var(--color-danger)' : pct > 80 ? 'var(--color-warning)' : 'var(--color-income)';
+      quickHtml += `
+        <div class="budget-item">
+          <div class="budget-info">
+            <div style="display:flex;align-items:center;gap:6px;"><span class="cat-dot" style="background:${cat.color};width:8px;height:8px;border-radius:50%;display:inline-block;"></span>${cat.name}</div>
+            <div class="budget-amount">${formatCurrency(t)} / ${formatCurrency(b)}</div>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:${Math.min(pct, 100)}%; background:${cClass};"></div>
+          </div>
+        </div>
+      `;
+    });
+    quickList.innerHTML = quickHtml;
+  }
+}
+
 // ===== Reports =====
 function updateReports() {
   const transactions = getFilteredTransactions();
   const expenses = transactions.filter(t => t.type === 'expense' || t.type === 'investment' || (t.type === 'loan' && t.parcelaAtual));
+  const incomes = transactions.filter(t => t.type === 'income' || (t.type === 'loan' && !t.parcelaAtual));
 
   // Average daily
   const totalExpense = expenses.reduce((a, t) => a + t.amount, 0);
   let avgDays;
   if (state.viewMode === 'year') {
-    // Dias no ano (simplificado)
     avgDays = 365;
   } else {
     avgDays = new Date(state.currentYear, state.currentMonth + 1, 0).getDate();
   }
-  const avgDaily = totalExpense / avgDays;
+  const avgDaily = totalExpense / (avgDays || 1);
   document.getElementById('avgDaily').textContent = formatCurrency(avgDaily);
 
   // Biggest expense
-  const biggest = expenses.length > 0 ? Math.max(...expenses.map(t => t.amount)) : 0;
+  const onlyExpenses = transactions.filter(t => t.type === 'expense');
+  const biggest = onlyExpenses.length > 0 ? Math.max(...onlyExpenses.map(t => t.amount)) : 0;
   document.getElementById('biggestExpense').textContent = formatCurrency(biggest);
 
   // Top category
@@ -1068,6 +1516,131 @@ function updateReports() {
   });
   const topCat = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0];
   document.getElementById('topCategory').textContent = topCat ? getCategory(topCat[0]).name : '-';
+
+  // Savings rate
+  const totalIncome = incomes.reduce((a, t) => a + t.amount, 0);
+  const savings = totalIncome - totalExpense;
+  const savingsRate = totalIncome > 0 ? ((savings / totalIncome) * 100).toFixed(1) : 0;
+  const srEl = document.getElementById('savingsRate');
+  if (srEl) {
+    srEl.textContent = `${savingsRate}%`;
+    srEl.style.color = savingsRate >= 0 ? 'var(--color-income)' : 'var(--color-expense)';
+  }
+
+  // Total invested
+  const totalInvested = transactions.filter(t => t.type === 'investment').reduce((a, t) => a + t.amount, 0);
+  const tiEl = document.getElementById('totalInvestmentReport');
+  if (tiEl) tiEl.textContent = formatCurrency(totalInvested);
+
+  // Total transactions
+  const ttEl = document.getElementById('totalTransactionsReport');
+  if (ttEl) ttEl.textContent = transactions.length;
+
+  // Category table
+  renderCategoryTable(transactions);
+
+  // Top expenses table
+  renderTopExpensesTable(transactions);
+}
+
+function renderCategoryTable(transactions) {
+  const wrapper = document.getElementById('categoryTableWrapper');
+  if (!wrapper) return;
+
+  const expenses = transactions.filter(t => t.type === 'expense' || t.type === 'investment' || (t.type === 'loan' && t.parcelaAtual));
+  const catTotals = {};
+  expenses.forEach(t => {
+    catTotals[t.category] = (catTotals[t.category] || 0) + t.amount;
+  });
+
+  const sorted = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+  const grandTotal = sorted.reduce((a, [, v]) => a + v, 0);
+
+  if (sorted.length === 0) {
+    wrapper.innerHTML = `<div class="empty-state" style="padding: 30px 20px;"><i class="ri-inbox-2-line"></i><h4>Sem dados</h4><p>Nenhuma despesa no período.</p></div>`;
+    return;
+  }
+
+  let html = `<table class="report-table">
+    <thead><tr>
+      <th>#</th>
+      <th>Categoria</th>
+      <th>Qtd</th>
+      <th>Progresso</th>
+      <th>Total</th>
+    </tr></thead>
+    <tbody>`;
+
+  sorted.forEach(([key, total], i) => {
+    const cat = getCategory(key);
+    const count = expenses.filter(t => t.category === key).length;
+    const pct = grandTotal > 0 ? (total / grandTotal * 100).toFixed(1) : 0;
+    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    html += `<tr>
+      <td><span class="rank-badge ${rankClass}">${i + 1}</span></td>
+      <td><span class="cat-dot" style="background:${cat.color};"></span>${cat.name}</td>
+      <td style="color:var(--text-muted);">${count}</td>
+      <td>
+        <div class="report-bar-wrap">
+          <div class="report-bar-bg"><div class="report-bar-fill" style="width:${pct}%;background:${cat.color};"></div></div>
+          <span style="font-size:11px;color:var(--text-muted);min-width:36px;text-align:right;">${pct}%</span>
+        </div>
+      </td>
+      <td>${formatCurrency(total)}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  wrapper.innerHTML = html;
+}
+
+function renderTopExpensesTable(transactions) {
+  const wrapper = document.getElementById('topExpensesTable');
+  if (!wrapper) return;
+
+  const expenses = transactions
+    .filter(t => t.type === 'expense')
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 10);
+
+  if (expenses.length === 0) {
+    wrapper.innerHTML = `<div class="empty-state" style="padding: 30px 20px;"><i class="ri-inbox-2-line"></i><h4>Sem dados</h4><p>Nenhuma despesa no período.</p></div>`;
+    return;
+  }
+
+  const maxAmount = expenses[0].amount;
+  let html = `<table class="report-table">
+    <thead><tr>
+      <th>#</th>
+      <th>Descrição</th>
+      <th>Categoria</th>
+      <th>Data</th>
+      <th>Progresso</th>
+      <th>Valor</th>
+    </tr></thead>
+    <tbody>`;
+
+  expenses.forEach((t, i) => {
+    const cat = getCategory(t.category);
+    const pct = (t.amount / maxAmount * 100).toFixed(1);
+    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    html += `<tr>
+      <td><span class="rank-badge ${rankClass}">${i + 1}</span></td>
+      <td style="font-weight:600;">${t.name}</td>
+      <td><span class="cat-dot" style="background:${cat.color};"></span>${cat.name}</td>
+      <td style="color:var(--text-muted);">${formatDate(t.date)}</td>
+      <td>
+        <div class="report-bar-wrap">
+          <div class="report-bar-bg"><div class="report-bar-fill" style="width:${pct}%;background:var(--color-expense);"></div></div>
+          <span style="font-size:11px;color:var(--text-muted);min-width:36px;text-align:right;">${pct}%</span>
+        </div>
+      </td>
+      <td style="color:var(--color-expense);">${formatCurrency(t.amount)}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  wrapper.innerHTML = html;
 }
 
 // ===== Modal =====
@@ -1413,7 +1986,12 @@ function showToast(message, type = 'info') {
 
 // ===== Export & Import =====
 function exportDataJSON() {
-  const dataStr = JSON.stringify(state.transactions, null, 2);
+  const exportObject = {
+    transactions: state.transactions,
+    customCategories: customCategories,
+    defaultBudgets: defaultBudgets
+  };
+  const dataStr = JSON.stringify(exportObject, null, 2);
   const blob = new Blob([dataStr], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1466,12 +2044,35 @@ function importDataJSON(event) {
   reader.onload = function (e) {
     try {
       const parsedData = JSON.parse(e.target.result);
+      let newTransactions = null;
+      let newCustomCategories = null;
+      let newBudgets = null;
+
       if (Array.isArray(parsedData)) {
+        newTransactions = parsedData;
+      } else if (parsedData && Array.isArray(parsedData.transactions)) {
+        newTransactions = parsedData.transactions;
+        newCustomCategories = parsedData.customCategories;
+        newBudgets = parsedData.defaultBudgets;
+      }
+
+      if (newTransactions) {
         // Validate if array items look like transactions
-        const isValid = parsedData.every(t => t.hasOwnProperty('id') && t.hasOwnProperty('amount') && t.hasOwnProperty('type'));
+        const isValid = newTransactions.every(t => typeof t === 'object' && t.hasOwnProperty('id') && t.hasOwnProperty('amount') && t.hasOwnProperty('type'));
         if (isValid) {
-          state.transactions = parsedData;
+          state.transactions = newTransactions;
           saveData();
+          
+          if (newCustomCategories) {
+            customCategories = newCustomCategories;
+            saveCustomCategories();
+          }
+          if (newBudgets) {
+            defaultBudgets = newBudgets;
+            localStorage.setItem(BUDGETS_KEY, JSON.stringify(defaultBudgets));
+          }
+
+          populateCategorySelects();
           updateAll();
           showToast('Dados restaurados com sucesso!', 'success');
         } else {
@@ -1493,12 +2094,14 @@ function clearAllData() {
     // Clear localStorage
     localStorage.removeItem('gestaofinanceiragu_transactions');
     localStorage.removeItem(CUSTOM_CATEGORIES_KEY);
+    localStorage.removeItem(BUDGETS_KEY);
     localStorage.removeItem('gestaofinanceiragu_theme');
     localStorage.removeItem('gestaofinanceiragu_initialized');
 
     // Reset state
     state.transactions = [];
     customCategories = {};
+    defaultBudgets = {};
     state.theme = 'light';
 
     // Save empty state
