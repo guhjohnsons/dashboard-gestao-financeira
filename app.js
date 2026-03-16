@@ -50,6 +50,13 @@ let state = {
 
 // ===== Initialize =====
 document.addEventListener('DOMContentLoaded', () => {
+  // Configurações globais do Chart.js
+  if (typeof Chart !== 'undefined') {
+    Chart.defaults.font.family = "'DM Sans', 'Outfit', sans-serif";
+    Chart.defaults.font.weight = '500';
+    Chart.defaults.color = '#94a3b8';
+  }
+  
   loadData();
   loadTheme();
   setupEventListeners();
@@ -85,6 +92,12 @@ function loadData() {
   if (savedBudgets) {
     try {
       defaultBudgets = JSON.parse(savedBudgets);
+      // Migration: Ensure all values are objects
+      Object.keys(defaultBudgets).forEach(k => {
+        if (typeof defaultBudgets[k] === 'number') {
+          defaultBudgets[k] = { amount: defaultBudgets[k], countAsExpense: true };
+        }
+      });
     } catch (_) {
       defaultBudgets = {};
     }
@@ -94,8 +107,30 @@ function loadData() {
 function getAllCategories() {
   const merged = { ...CATEGORIES };
   Object.keys(merged).forEach(k => {
-    if (defaultBudgets[k] !== undefined) merged[k].budget = defaultBudgets[k];
+    if (defaultBudgets[k] !== undefined) {
+      if (typeof defaultBudgets[k] === 'object') {
+        merged[k].budget = defaultBudgets[k].amount;
+        merged[k].countAsExpense = defaultBudgets[k].countAsExpense !== false;
+      } else {
+        merged[k].budget = defaultBudgets[k];
+        merged[k].countAsExpense = true;
+      }
+    } else {
+      merged[k].countAsExpense = true; // Default behavior
+    }
   });
+
+  // Merge custom categories and ensure consistency
+  Object.keys(customCategories).forEach(k => {
+    const cat = customCategories[k];
+    if (typeof cat.budget === 'object') {
+      cat.countAsExpense = cat.budget.countAsExpense !== false;
+      cat.budget = cat.budget.amount;
+    } else if (cat.countAsExpense === undefined) {
+      cat.countAsExpense = true;
+    }
+  });
+
   return { ...merged, ...customCategories };
 }
 
@@ -123,13 +158,13 @@ function populateCategorySelects() {
     if (!selectEl) return;
     const list = byType[currentType] || [];
     const label = typeLabels[currentType] || currentType;
-    let html = '<option value="">Selecione uma categoria</option>';
+    let html = '<option value="">Selecione uma categoria...</option>';
     html += `<optgroup label="${label}">`;
     list.forEach(([key, cat]) => {
       html += `<option value="${key}">${cat.emoji} ${cat.name}</option>`;
     });
     html += '</optgroup>';
-    html += '<option value="__nova_categoria__">➕ Nova categoria...</option>';
+    html += '<option value="__nova_categoria__">➕ Criar nova categoria...</option>';
     selectEl.innerHTML = html;
   }
 
@@ -539,19 +574,27 @@ function updateAll() {
   }
 }
 
-// ===== Summary Cards =====
 function updateSummaryCards() {
+  const allCategories = getAllCategories();
   const transactions = getFilteredTransactions();
 
   const income = transactions.filter(t => t.type === 'income').reduce((a, t) => a + t.amount, 0);
-  const expense = transactions.filter(t => t.type === 'expense').reduce((a, t) => a + t.amount, 0);
+  
+  // Filter expenses that should be counted
+  const expenseTransactions = transactions.filter(t => t.type === 'expense');
+  const expense = expenseTransactions
+    .filter(t => allCategories[t.category]?.countAsExpense !== false)
+    .reduce((a, t) => a + t.amount, 0);
+
   const investment = transactions.filter(t => t.type === 'investment').reduce((a, t) => a + t.amount, 0);
   
   // Lógica especial para Empréstimos:
   // Se for uma entrada (sem parcelaAtual), conta como "receita" de empréstimo.
   // Se for uma parcela (com parcelaAtual), conta como "despesa" de empréstimo.
   const loanEntries = transactions.filter(t => t.type === 'loan' && !t.parcelaAtual).reduce((a, t) => a + t.amount, 0);
-  const loanInstallments = transactions.filter(t => t.type === 'loan' && t.parcelaAtual).reduce((a, t) => a + t.amount, 0);
+  const loanInstallments = transactions.filter(t => t.type === 'loan' && t.parcelaAtual)
+    .filter(t => allCategories[t.category]?.countAsExpense !== false)
+    .reduce((a, t) => a + t.amount, 0);
 
   const balance = (income + loanEntries) - (expense + investment + loanInstallments);
 
@@ -660,20 +703,22 @@ function updateDailyChart(transactions, colors) {
         {
           label: 'Despesas',
           data: expenseData,
-          backgroundColor: 'rgba(239, 68, 68, 0.7)',
-          borderColor: 'rgba(239, 68, 68, 1)',
-          borderWidth: 1,
-          borderRadius: 4,
+          backgroundColor: 'rgba(239, 68, 68, 0.8)',
+          borderColor: 'transparent',
+          borderWidth: 0,
+          borderRadius: 6,
           borderSkipped: false,
+          barThickness: state.viewMode === 'year' ? 20 : 'flex',
         },
         {
           label: 'Receitas',
           data: incomeData,
-          backgroundColor: 'rgba(16, 185, 129, 0.7)',
-          borderColor: 'rgba(16, 185, 129, 1)',
-          borderWidth: 1,
-          borderRadius: 4,
+          backgroundColor: 'rgba(16, 185, 129, 0.8)',
+          borderColor: 'transparent',
+          borderWidth: 0,
+          borderRadius: 6,
           borderSkipped: false,
+          barThickness: state.viewMode === 'year' ? 20 : 'flex',
         }
       ]
     },
@@ -685,7 +730,8 @@ function updateDailyChart(transactions, colors) {
         legend: {
           display: true,
           position: 'top',
-          labels: { color: colors.textColor, font: { family: 'Inter', size: 11 }, boxWidth: 12, padding: 16 }
+          align: 'end',
+          labels: { color: colors.textColor, font: { weight: '600', size: 12 }, boxWidth: 8, usePointStyle: true, pointStyle: 'circle', padding: 20 }
         },
         tooltip: {
           backgroundColor: colors.tooltipBg,
@@ -695,8 +741,8 @@ function updateDailyChart(transactions, colors) {
           borderWidth: 1,
           cornerRadius: 8,
           padding: 12,
-          titleFont: { family: 'Inter', weight: '600' },
-          bodyFont: { family: 'Inter' },
+          titleFont: { family: 'DM Sans', weight: '600' },
+          bodyFont: { family: 'DM Sans' },
           callbacks: {
             label: ctx => `${ctx.dataset.label}: ${formatCurrency(ctx.raw)}`
           }
@@ -705,11 +751,11 @@ function updateDailyChart(transactions, colors) {
       scales: {
         x: {
           grid: { display: false },
-          ticks: { color: colors.textColor, font: { family: 'Inter', size: 10 }, maxTicksLimit: state.viewMode === 'year' ? 12 : 15 }
+          ticks: { color: colors.textColor, font: { family: 'DM Sans', size: 10 }, maxTicksLimit: state.viewMode === 'year' ? 12 : 15 }
         },
         y: {
           grid: { color: colors.gridColor },
-          ticks: { color: colors.textColor, font: { family: 'Inter', size: 10 }, callback: v => `R$${v}` },
+          ticks: { color: colors.textColor, font: { family: 'DM Sans', size: 10 }, callback: v => `R$${v}` },
           beginAtZero: true
         }
       }
@@ -753,7 +799,7 @@ function updateCategoryChart(transactions, colors) {
           position: 'bottom',
           labels: {
             color: colors.textColor,
-            font: { family: 'Inter', size: 11 },
+            font: { size: 11 },
             padding: 12,
             boxWidth: 12,
             usePointStyle: true,
@@ -768,8 +814,8 @@ function updateCategoryChart(transactions, colors) {
           borderWidth: 1,
           cornerRadius: 8,
           padding: 12,
-          titleFont: { family: 'Inter', weight: '600' },
-          bodyFont: { family: 'Inter' },
+          titleFont: { family: 'DM Sans', weight: '600' },
+          bodyFont: { family: 'DM Sans' },
           callbacks: {
             label: ctx => {
               const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
@@ -837,7 +883,7 @@ function updateComparisonChart(transactions, colors) {
       maintainAspectRatio: false,
       plugins: {
         legend: {
-          labels: { color: colors.textColor, font: { family: 'Inter', size: 11 }, boxWidth: 12, padding: 16 }
+          labels: { color: colors.textColor, font: { family: 'DM Sans', size: 11 }, boxWidth: 12, padding: 16 }
         },
         tooltip: {
           backgroundColor: colors.tooltipBg,
@@ -855,11 +901,11 @@ function updateComparisonChart(transactions, colors) {
       scales: {
         x: {
           grid: { display: false },
-          ticks: { color: colors.textColor, font: { family: 'Inter', size: 11 } }
+          ticks: { color: colors.textColor, font: { family: 'DM Sans', size: 11 } }
         },
         y: {
           grid: { color: colors.gridColor },
-          ticks: { color: colors.textColor, font: { family: 'Inter', size: 10 }, callback: v => `R$${v}` },
+          ticks: { color: colors.textColor, font: { family: 'DM Sans', size: 10 }, callback: v => `R$${v}` },
           beginAtZero: true
         }
       }
@@ -913,7 +959,7 @@ function updateTrendChart(colors) {
       maintainAspectRatio: false,
       plugins: {
         legend: {
-          labels: { color: colors.textColor, font: { family: 'Inter', size: 11 }, boxWidth: 12 }
+          labels: { color: colors.textColor, font: { family: 'DM Sans', size: 11 }, boxWidth: 12 }
         },
         tooltip: {
           backgroundColor: colors.tooltipBg,
@@ -931,11 +977,11 @@ function updateTrendChart(colors) {
       scales: {
         x: {
           grid: { display: false },
-          ticks: { color: colors.textColor, font: { family: 'Inter', size: 11 } }
+          ticks: { color: colors.textColor, font: { family: 'DM Sans', size: 11 } }
         },
         y: {
           grid: { color: colors.gridColor },
-          ticks: { color: colors.textColor, font: { family: 'Inter', size: 10 }, callback: v => `R$${v}` }
+          ticks: { color: colors.textColor, font: { family: 'DM Sans', size: 10 }, callback: v => `R$${v}` }
         }
       }
     }
@@ -964,7 +1010,7 @@ function updateTypeDistributionChart(transactions, colors) {
       maintainAspectRatio: false,
       cutout: '60%',
       plugins: {
-        legend: { position: 'bottom', labels: { color: colors.textColor, font: { family: 'Inter', size: 11 }, padding: 12, boxWidth: 12, usePointStyle: true, pointStyle: 'circle' } },
+        legend: { position: 'bottom', labels: { color: colors.textColor, font: { family: 'DM Sans', size: 11 }, padding: 12, boxWidth: 12, usePointStyle: true, pointStyle: 'circle' } },
         tooltip: {
           backgroundColor: colors.tooltipBg, titleColor: colors.tooltipText, bodyColor: colors.tooltipText,
           borderColor: colors.tooltipBorder, borderWidth: 1, cornerRadius: 8, padding: 12,
@@ -1013,12 +1059,12 @@ function updateCategoryRankingChart(transactions, colors) {
       scales: {
         x: {
           grid: { color: colors.gridColor },
-          ticks: { color: colors.textColor, font: { family: 'Inter', size: 10 }, callback: v => `R$${v}` },
+          ticks: { color: colors.textColor, font: { family: 'DM Sans', size: 10 }, callback: v => `R$${v}` },
           beginAtZero: true
         },
         y: {
           grid: { display: false },
-          ticks: { color: colors.textColor, font: { family: 'Inter', size: 11 } }
+          ticks: { color: colors.textColor, font: { family: 'DM Sans', size: 11 } }
         }
       }
     }
@@ -1072,7 +1118,7 @@ function updateCumulativeChart(colors) {
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { labels: { color: colors.textColor, font: { family: 'Inter', size: 11 }, boxWidth: 12 } },
+        legend: { labels: { color: colors.textColor, font: { family: 'DM Sans', size: 11 }, boxWidth: 12 } },
         tooltip: {
           backgroundColor: colors.tooltipBg, titleColor: colors.tooltipText, bodyColor: colors.tooltipText,
           borderColor: colors.tooltipBorder, borderWidth: 1, cornerRadius: 8, padding: 12,
@@ -1080,10 +1126,10 @@ function updateCumulativeChart(colors) {
         }
       },
       scales: {
-        x: { grid: { display: false }, ticks: { color: colors.textColor, font: { family: 'Inter', size: 10 } } },
+        x: { grid: { display: false }, ticks: { color: colors.textColor, font: { family: 'DM Sans', size: 10 } } },
         y: {
           grid: { color: colors.gridColor },
-          ticks: { color: colors.textColor, font: { family: 'Inter', size: 10 }, callback: v => `R$${v}` }
+          ticks: { color: colors.textColor, font: { family: 'DM Sans', size: 10 }, callback: v => `R$${v}` }
         }
       }
     }
@@ -1115,7 +1161,7 @@ function updateInvestmentAllocationChart(transactions, colors) {
     options: {
       responsive: true, maintainAspectRatio: false, cutout: '60%',
       plugins: {
-        legend: { position: 'bottom', labels: { color: colors.textColor, font: { family: 'Inter', size: 11 }, padding: 12, boxWidth: 12, usePointStyle: true, pointStyle: 'circle' } },
+        legend: { position: 'bottom', labels: { color: colors.textColor, font: { family: 'DM Sans', size: 11 }, padding: 12, boxWidth: 12, usePointStyle: true, pointStyle: 'circle' } },
         tooltip: {
           backgroundColor: colors.tooltipBg, titleColor: colors.tooltipText, bodyColor: colors.tooltipText,
           borderColor: colors.tooltipBorder, borderWidth: 1, cornerRadius: 8, padding: 12,
@@ -1170,7 +1216,7 @@ function updateInvestmentHistoryChart(colors) {
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { labels: { color: colors.textColor, font: { family: 'Inter', size: 11 }, boxWidth: 12, padding: 16 } },
+        legend: { labels: { color: colors.textColor, font: { family: 'DM Sans', size: 11 }, boxWidth: 12, padding: 16 } },
         tooltip: {
           backgroundColor: colors.tooltipBg, titleColor: colors.tooltipText, bodyColor: colors.tooltipText,
           borderColor: colors.tooltipBorder, borderWidth: 1, cornerRadius: 8, padding: 12,
@@ -1178,10 +1224,10 @@ function updateInvestmentHistoryChart(colors) {
         }
       },
       scales: {
-        x: { grid: { display: false }, ticks: { color: colors.textColor, font: { family: 'Inter', size: 11 } } },
+        x: { grid: { display: false }, ticks: { color: colors.textColor, font: { family: 'DM Sans', size: 11 } } },
         y: {
           grid: { color: colors.gridColor },
-          ticks: { color: colors.textColor, font: { family: 'Inter', size: 10 }, callback: v => `R$${v}` },
+          ticks: { color: colors.textColor, font: { family: 'DM Sans', size: 10 }, callback: v => `R$${v}` },
           beginAtZero: true
         }
       }
@@ -1382,12 +1428,13 @@ function saveNewCategoryFromModal() {
 }
 
 // ===== Budgets =====
-function updateBudget(catKey, newBudget) {
+function updateBudget(catKey, newBudget, countAsExpense = true) {
+  const budgetObj = { amount: newBudget, countAsExpense: countAsExpense };
   if (isCustomCategory(catKey)) {
-    customCategories[catKey].budget = newBudget;
+    customCategories[catKey].budget = budgetObj;
     saveCustomCategories();
   } else {
-    defaultBudgets[catKey] = newBudget;
+    defaultBudgets[catKey] = budgetObj;
     localStorage.setItem(BUDGETS_KEY, JSON.stringify(defaultBudgets));
   }
   updateAll();
@@ -1416,17 +1463,25 @@ function renderBudgets() {
       const total = catTotals[key] || 0;
       const budget = cat.budget || 0;
       let pct = budget > 0 ? (total / budget) * 100 : 0;
-      let colorClass = pct > 100 ? 'var(--color-danger)' : pct > 80 ? 'var(--color-warning)' : 'var(--color-income)';
+      let colorClass = pct > 100 ? 'var(--color-expense)' : pct > 80 ? 'var(--color-warning)' : 'var(--color-income)';
+      const countAsExpense = cat.countAsExpense !== false;
       
       setupHtml += `
-        <div class="budget-card">
+        <div class="budget-card ${!countAsExpense ? 'excluded' : ''}">
           <div class="budget-card-header">
             <div class="budget-icon" style="background:${cat.color}20;color:${cat.color};">
               <i class="${cat.icon}"></i>
             </div>
-            <div>
+            <div style="flex: 1;">
               <h4 style="font-size:15px;">${cat.name}</h4>
               <p style="font-size:12px;color:var(--text-muted);">Gasto atual: ${formatCurrency(total)}</p>
+            </div>
+            <div class="budget-toggle" title="Contar como despesa no total">
+              <label class="switch">
+                <input type="checkbox" ${countAsExpense ? 'checked' : ''} 
+                       onchange="updateBudget('${key}', ${budget}, this.checked)">
+                <span class="slider round"></span>
+              </label>
             </div>
           </div>
           
@@ -1445,7 +1500,7 @@ function renderBudgets() {
             <input type="number" 
                    value="${budget}"
                    placeholder="Defina o meta mensal"
-                   onchange="updateBudget('${key}', parseFloat(this.value) || 0)" />
+                   onchange="updateBudget('${key}', parseFloat(this.value) || 0, ${countAsExpense})" />
           </div>
         </div>
       `;
@@ -1466,11 +1521,11 @@ function renderBudgets() {
       const t = catTotals[key] || 0;
       const b = cat.budget || 1;
       return { key, cat, t, b, pct: (t / b) * 100 };
-    }).sort((a, b) => b.pct - a.pct).slice(0, 3);
+    }).sort((a, b) => b.pct - a.pct).slice(0, 5);
 
     let quickHtml = '';
     sorted.forEach(({ cat, t, b, pct }) => {
-      let cClass = pct > 100 ? 'var(--color-danger)' : pct > 80 ? 'var(--color-warning)' : 'var(--color-income)';
+      let cClass = pct > 100 ? 'var(--color-expense)' : pct > 80 ? 'var(--color-warning)' : 'var(--color-income)';
       quickHtml += `
         <div class="budget-item">
           <div class="budget-info">

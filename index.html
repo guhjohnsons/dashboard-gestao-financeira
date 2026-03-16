@@ -7,6 +7,9 @@
     <meta name="description"
         content="Dashboard de Gastos Mensais - Controle suas finanças pessoais com gráficos interativos e categorias detalhadas">
     <title>Dashboard de Gastos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -37,10 +40,6 @@
                 <button class="nav-item" data-page="transactions" id="nav-transactions">
                     <i class="ri-exchange-funds-line"></i>
                     Transações
-                </button>
-                <button class="nav-item" data-page="add-expense" id="nav-add-expense">
-                    <i class="ri-add-circle-line"></i>
-                    Novo Registro
                 </button>
                 <button class="nav-item" data-page="categories" id="nav-categories">
                     <i class="ri-folder-chart-line"></i>
@@ -103,7 +102,7 @@
                     <button class="btn btn-outline" id="btnToday" style="font-size: 13px; font-weight: 600; padding: 0 12px; height: 38px;">Hoje</button>
                     <button class="btn btn-primary" id="btnAddNew" type="button">
                         <i class="ri-add-line"></i>
-                        <span class="btn-text-desktop">Adicionar</span>
+                        <span class="btn-text-desktop">Adicionar Registro</span>
                     </button>
                 </div>
             </header>
@@ -600,23 +599,23 @@
         <div class="modal">
             <div class="modal-header">
                 <h3 id="modalTitle">Nova Transação</h3>
-                <button class="modal-close" id="modalClose"><i class="ri-close-line"></i></button>
+                <button class="modal-close" id="modalClose" aria-label="Fechar modal"><i class="ri-close-line"></i></button>
             </div>
             <div class="modal-body">
-                <form id="expenseForm">
+                <form id="expenseForm" autocomplete="off">
                     <input type="hidden" id="editId">
+
+                    <!-- Tipo -->
                     <div class="form-group">
-                        <label>Tipo</label>
+                        <label>Tipo da Transação</label>
                         <div class="type-toggle type-toggle-four">
                             <button type="button" class="type-btn income-type" data-type="income" id="modalTypeIncome">
                                 <i class="ri-arrow-up-circle-line"></i> Receita
                             </button>
-                            <button type="button" class="type-btn investment-type" data-type="investment"
-                                id="modalTypeInvestment">
+                            <button type="button" class="type-btn investment-type" data-type="investment" id="modalTypeInvestment">
                                 <i class="ri-line-chart-line"></i> Investimento
                             </button>
-                            <button type="button" class="type-btn expense-type active" data-type="expense"
-                                id="modalTypeExpense">
+                            <button type="button" class="type-btn expense-type active" data-type="expense" id="modalTypeExpense">
                                 <i class="ri-arrow-down-circle-line"></i> Despesa
                             </button>
                             <button type="button" class="type-btn loan-type" data-type="loan" id="modalTypeLoan">
@@ -624,60 +623,83 @@
                             </button>
                         </div>
                     </div>
+
+                    <!-- Descrição + Valor + Data em grid -->
                     <div class="form-group">
                         <label for="modalName">Descrição</label>
                         <input type="text" class="form-control" id="modalName"
-                            placeholder="Ex: Supermercado, Salário..." required>
+                            placeholder="Ex: Supermercado, Salário, Fatura Nubank..." required autocomplete="off">
                     </div>
+
                     <div class="form-row">
-                        <div class="form-group">
+                        <div class="form-group" style="margin-bottom:0;">
                             <label for="modalAmount">Valor (R$)</label>
-                            <input type="number" class="form-control" id="modalAmount" placeholder="0,00" step="0.01"
-                                min="0.01" required>
+                            <input type="number" class="form-control" id="modalAmount"
+                                placeholder="0,00" step="0.01" min="0.01" required>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="margin-bottom:0;">
                             <label for="modalDate">Data</label>
                             <input type="date" class="form-control" id="modalDate" required>
                         </div>
                     </div>
-                    <div class="form-group">
+
+                    <!-- Categoria -->
+                    <div class="form-group" style="margin-top:18px;">
                         <label for="modalCategory">Categoria</label>
                         <select class="form-control" id="modalCategory" required>
-                            <option value="">Selecione uma categoria</option>
+                            <option value="">Selecione uma categoria...</option>
                         </select>
-                        <div class="form-group" id="modalNovaCategoriaWrap" style="display: none; margin-top: 8px;">
+                        <div class="form-group" id="modalNovaCategoriaWrap" style="display: none; margin-top: 10px; margin-bottom:0;">
                             <label for="modalNovaCategoriaNome">Nome da nova categoria</label>
                             <input type="text" class="form-control" id="modalNovaCategoriaNome"
                                 placeholder="Ex: Academia, Streaming...">
                         </div>
-                        <div class="form-group" id="modalParcelasWrap" style="display: none; margin-top: 8px;">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                                <div>
-                                    <label for="modalParcelasTotal">Quantidade</label>
-                                    <input type="number" class="form-control" id="modalParcelasTotal" placeholder="Ex: 10"
-                                        min="1" max="999">
-                                </div>
-                                <div>
-                                    <label for="modalParcelaValor">Valor da Parcela</label>
-                                    <input type="number" class="form-control" id="modalParcelaValor"
-                                        placeholder="720,00" step="0.01">
-                                </div>
+                    </div>
+
+                    <!-- Campos de Empréstimo -->
+                    <div id="modalParcelasWrap" style="display: none;">
+                        <div class="loan-section-header">
+                            <i class="ri-hand-coin-line"></i>
+                            <span>Detalhes do Empréstimo</span>
+                        </div>
+                        <p class="loan-helper-text">
+                            A entrada será registrada como receita. As parcelas são agendadas automaticamente como despesas nos meses seguintes.
+                        </p>
+                        <div class="form-row">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label for="modalParcelasTotal">Nº de Parcelas</label>
+                                <input type="number" class="form-control" id="modalParcelasTotal"
+                                    placeholder="Ex: 12" min="1" max="999">
                             </div>
-                            <label for="modalParcelaAtual" style="margin-top: 6px;">Parcela atual (opcional)</label>
-                            <input type="number" class="form-control" id="modalParcelaAtual" placeholder="Ex: 1" min="1"
-                                max="999">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label for="modalParcelaValor">Valor da Parcela (R$)</label>
+                                <input type="number" class="form-control" id="modalParcelaValor"
+                                    placeholder="0,00" step="0.01">
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top:14px; margin-bottom:0;">
+                            <label for="modalParcelaAtual">Parcela Atual
+                                <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted);">(opcional — para registrar parcela avulsa)</span>
+                            </label>
+                            <input type="number" class="form-control" id="modalParcelaAtual"
+                                placeholder="Ex: 3" min="1" max="999">
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label for="modalNotes">Observações (opcional)</label>
-                        <input type="text" class="form-control" id="modalNotes" placeholder="Notas adicionais...">
+
+                    <!-- Observações -->
+                    <div class="form-group" style="margin-top:18px; margin-bottom:0;">
+                        <label for="modalNotes">Observações
+                            <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted);">(opcional)</span>
+                        </label>
+                        <input type="text" class="form-control" id="modalNotes"
+                            placeholder="Notas adicionais...">
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" id="modalCancel">Cancelar</button>
-                <button class="btn btn-primary" id="modalSave">
-                    <i class="ri-save-line"></i> Salvar
+                <button class="btn btn-secondary" id="modalCancel" type="button">Cancelar</button>
+                <button class="btn btn-primary" id="modalSave" type="button" style="min-width:140px;">
+                    <i class="ri-save-line"></i> Salvar Transação
                 </button>
             </div>
         </div>

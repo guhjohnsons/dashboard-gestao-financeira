@@ -1,0 +1,53 @@
+# ============================================
+# Arquivos que o git deve IGNORAR
+# (não necessários para o projeto funcionar)
+# ============================================
+
+# Artefato gerado pelo npx skills
+skills-lock.json
+
+# Node / NPM
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+package.json
+
+# Ferramentas de IA, Copilotos e IDs de Sessão
+.gemini/
+.claude/
+.cline/
+.augment/
+.codebuddy/
+.continue/
+.cortex/
+.commandcode/
+.kimi/
+.agent_skills/
+
+# PASTA DE SKILLS (.agents e .agent)
+# Ignora os arquivos de agentes, MAS permite o commit das skills baixadas
+.agents/*
+!.agents/skills/
+.agent/*
+!.agent/skills/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.lnk
+
+# Editor / IDE
+.vscode/
+.idea/
+*.suo
+*.user
+*.workspace
+*.project
+
+# Logs e temporários
+*.log
+.tmp/
+tmp/

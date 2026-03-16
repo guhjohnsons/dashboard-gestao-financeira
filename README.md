@@ -1,60 +1,76 @@
 # 📊 Dashboard de Gestão Financeira
 
-![Dashboard Preview](https://via.placeholder.com/800x400.png?text=Dashboard+de+Gest%C3%A3o+Financeira+Preview)
+Um **dashboard financeiro pessoal** que roda 100% no navegador — sem backend, sem banco de dados externo. Todos os dados são armazenados via `localStorage`. Design premium com tema claro/escuro nativo.
 
-Este é um projeto de **Gestão Financeira Pessoal** que funciona inteiramente no navegador. Desenvolvido com HTML, CSS puro e JavaScript moderno, não requer banco de dados externo ou backend, utilizando o `localStorage` do navegador para prover uma experiência rápida, segura e privada do usuário. O layout apresenta um design moderno e premium com suporte nativo a temas (Claro e Escuro).
-
-## ✨ Principais Funcionalidades
+## ✨ Funcionalidades
 
 ### 📈 Dashboard Analítico
-- Visão geral rápida com saldos combinados (Receitas, Despesas, Investimentos e Empréstimos).
-- Atalhos Rápidos para criação fluida de transações com 1 clique.
-- Acompanhamento "Quick Budgets" (orçamentos ativos) para não perder o controle.
-- Resumo dinâmico Saudação ("Bom dia/Boa tarde/Boa noite").
+- Cards-resumo com animações escalonadas (Receitas, Despesas, Investimentos, Empréstimos, Saldo)
+- Atalhos rápidos para registrar qualquer tipo de transação com 1 clique
+- Metas do Mês: exibe os orçamentos ativos com barra de progresso colorida
+- Saudação dinâmica por horário ("Bom dia / Boa tarde / Boa noite")
 
 ### 💸 Sistema de Transações (CRUD)
-- Registre Receitas, Investimentos, Despesas e Empréstimos.
-- Criação de Categorias Personalizadas em tempo real.
-- Empréstimos possuem controle unificado (a entrada inicial funciona como receita, enquanto as parcelas em meses futuros contabilizam como despesa separadamente).
-- Opção de busca/filtro instantâneo por nome nas transações.
+- Registre Receitas, Investimentos, Despesas e Empréstimos
+- Categorias personalizadas criadas em tempo real
+- Empréstimos com geração automática de parcelas em meses futuros
+- Busca e filtro instantâneo por tipo e descrição
+- Edição e exclusão com confirmação
 
-### 🎯 Orçamentos e Metas Mensais
-- Aba dedicada à configuração de tetos de gastos (`Budgets`).
-- Configure um limite monetário para cada categoria de despesa (ex: Alimentação, Transporte).
-- Card interativo com barra de progresso (a barra preenche e muda de cor consoante ao quão próximo você está do limite).
+### 🎯 Orçamentos e Metas (Budgets)
+- Configure tetos mensais de gasto por categoria
+- **Flag "Contar como Despesa"**: toggle por meta para controlar se aquela categoria soma (ou não) ao total de despesas — ideal para categorias que já aparecem em outra fatura
+- Barra de progresso que muda de cor (verde → amarelo → vermelho) conforme o limite se aproxima
+- Destaque visual para metas excluídas do total (`border-style: dashed`)
 
 ### 📊 Relatórios Completos
-Módulos dedicados em Abas (Tabs) para visualização macro e micro das suas finanças através de gráficos Chart.js:
-- **Visão Geral:** Receitas x Despesas, Distribuição por Tipo e ranking.
-- **Tendências:** Acompanhamento do Saldo Mensal em linhas e Saldo Acumulado.
-- **Categorias:** Onde seu dinheiro mais vai? Descubra via Tabela ou Gráfico Horizontal.
-- **Top Despesas:** As contas que mais drenaram saldo nos últimos 30 dias (ou no seu filtro Anual).
-- **Investimentos:** Gráficos da divisão do seu portfólio de investimentos (ex: Cripto vs Renda Fixa) e Histórico.
+Abas dedicadas com gráficos Chart.js:
+- **Visão Geral:** Receitas × Despesas, distribuição por tipo e ranking
+- **Tendências:** Saldo mensal e saldo acumulado ao longo do tempo
+- **Categorias:** Tabela e gráfico horizontal de onde o dinheiro vai
+- **Top Despesas:** As transações que mais pesaram no período selecionado
+- **Investimentos:** Divisão do portfólio e histórico
 
-### ⚙️ Configurações / Backup Inteligente
-A aba de configuração permite você ser dono dos seus próprios dados:
-- **Exportar em JSON:** O download salva absolutamente tudo (Suas Transações, Categorias criadas e até as suas metas de Orçamento programadas).
-- **Importar JSON:** Você pode subir um JSON salvo para restaurar o sistema exatamente como ele era (compatível com backups de diferentes versões).
-- **Exportar CSV:** Baixe uma planilha amigável estruturada para leitura no Excel/Google Sheets.
-- **Wipe (Limpar Tudo):** Botão de perigo capaz de zerar localStorage e resetar o dashboard para a configuração de fábrica.
+### ⚙️ Backup Inteligente
+- **Exportar JSON** — salva transações, categorias personalizadas e todas as metas/flags
+- **Importar JSON** — restaura o sistema completo, inclusive as novas flags de orçamento
+- **Exportar CSV** — planilha estruturada para Excel/Google Sheets
+- **Limpar tudo** — reset completo com confirmação
 
-## 🛠️ Tecnologias Utilizadas
+## 🎨 Design & UX
 
-- **HTML5** & **CSS3** (Variáveis nativas para temas claros e escuros).
-- **JavaScript Moderno (ES6)**, orientado a manipulação de DOM e `localStorage`.
-- **Chart.js:** Biblioteca externa embutida via CDN para renderização de gráficos.
-- **Remixicon:** Para renderização de ícones padronizados.
+Melhorias aplicadas com base nas skills `ui-ux-pro-max` e `frontend-design`:
 
-## 🚀 Como Rodar Localmente
+| Área | Implementação |
+|------|--------------|
+| **Tipografia** | DM Sans (body) + Outfit (headings e valores) |
+| **Acessibilidade** | `:focus-visible` rings, `prefers-reduced-motion`, contraste AAA |
+| **Touch targets** | Mínimo 44px em todos os botões e selects |
+| **Modais e Formulários** | Layout em grid 1fr 1fr, hints contextuais (ex: empréstimos) e larguras responsivas aprimoradas |
+| **Dashboard** | Box de "Metas do Mês" compacto com max 5 itens; Scroll dinâmico (`72vh`) nas transações recentes |
+| **Animações** | Entrada escalonada com spring-physics (`cubic-bezier(0.16, 1, 0.3, 1)`) |
+| **Glassmorphism** | Header com `backdrop-filter: blur(12px) saturate(180%)` |
+| **Números** | `font-variant-numeric: tabular-nums` em todos os valores financeiros |
+| **Tema Escuro** | Tokens HSL semânticos para ambos os temas |
 
-O aplicativo roda no lado do cliente. Não é necessário Docker, banco de dados ou ambiente de servidor pesado.
+## 🛠️ Tecnologias
 
-1. Clone o repositório (`git clone <seu-repositorio>`).
-2. Acesse a pasta do projeto.
-3. Para uma experiência completa sem bloqueios do navegador, abra a pasta num servidor local.
-   * Usando Live Server (Extensão do VsCode).
-   * Ou pelo terminal, instalando: `npx serve -l 3000`.
-4. Abra `http://localhost:3000` em seu navegador.
+- **HTML5** + **CSS3** (variáveis nativas, grid, flexbox, `backdrop-filter`)
+- **JavaScript ES6** — manipulação de DOM e `localStorage`
+- **Chart.js 4.4** — gráficos interativos via CDN
+- **Remixicon** — ícones SVG padronizados
 
-## 📱 Responsividade (Mobile e Desktop)
-O layout contém regras em Media Queries flexíveis (`flexbox` e `CSS grids`) adaptando todas as telas perfeitamente, com menu "hambúrguer" sanduíche e modais redesenhados para não prejudicar dispositivos móveis.
+## 🚀 Como Rodar
+
+Não é necessário servidor ou instalação:
+
+1. Clone: `git clone <seu-repositorio>`
+2. Abra com **Live Server** (VS Code) ou:
+   ```bash
+   npx serve -l 3000
+   ```
+3. Acesse `http://localhost:3000`
+
+## 📱 Responsivo
+
+Menu colapsável em mobile (hamburger), cards responsivos em grid, modais adaptados para telas pequenas.
