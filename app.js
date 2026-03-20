@@ -431,6 +431,7 @@ function setupEventListeners() {
       const catName = btn.dataset.qaName;
       openModal();
       setModalType(type);
+      populateCategorySelects();
       if (catName) {
         document.getElementById('modalName').value = catName;
         const allCats = getAllCategories();
@@ -1721,12 +1722,15 @@ function openModal(editId) {
       document.getElementById('modalName').value = t.name;
       document.getElementById('modalAmount').value = t.amount;
       document.getElementById('modalDate').value = t.date;
+      
+      setModalType(t.type);
+      populateCategorySelects();
+      
       document.getElementById('modalCategory').value = t.category;
       document.getElementById('modalNotes').value = t.notes || '';
       if (document.getElementById('modalParcelasTotal')) document.getElementById('modalParcelasTotal').value = t.parcelas || '';
       if (document.getElementById('modalParcelaValor')) document.getElementById('modalParcelaValor').value = t.parcelaValor || '';
       if (document.getElementById('modalParcelaAtual')) document.getElementById('modalParcelaAtual').value = t.parcelaAtual || '';
-      setModalType(t.type);
       if (isLoanCategory(t.category)) {
         if (parcelasWrap) parcelasWrap.style.display = 'block';
       }
