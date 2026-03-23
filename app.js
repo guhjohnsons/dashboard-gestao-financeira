@@ -46,7 +46,11 @@ let state = {
   deleteId: null,
   theme: 'light',
   viewMode: 'month', // 'month' or 'year'
+  confirmCallback: null, // para modal de confirmação genérico
 };
+
+const SAVINGS_GOALS_KEY = 'gestaofinanceiragu_savings_goals';
+let savingsGoals = []; // [{ id, name, targetAmount, currentAmount, targetDate, icon }]
 
 // ===== Initialize =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -59,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   loadData();
   loadTheme();
+  loadSavingsGoals();
   setupEventListeners();
   setDefaultDates();
   populateCategorySelects();
@@ -102,6 +107,19 @@ function loadData() {
       defaultBudgets = {};
     }
   }
+}
+
+function loadSavingsGoals() {
+  try {
+    const saved = localStorage.getItem(SAVINGS_GOALS_KEY);
+    savingsGoals = saved ? JSON.parse(saved) : [];
+  } catch (_) {
+    savingsGoals = [];
+  }
+}
+
+function saveSavingsGoals() {
+  localStorage.setItem(SAVINGS_GOALS_KEY, JSON.stringify(savingsGoals));
 }
 
 function getAllCategories() {
@@ -260,16 +278,17 @@ function deleteCustomCategory(key) {
   const msg = count > 0
     ? `Excluir a categoria "${cat.name}"? As ${count} transação(ões) serão movidas para "Outros".`
     : `Excluir a categoria "${cat.name}"?`;
-  if (!confirm(msg)) return;
 
-  state.transactions.forEach(t => {
-    if (t.category === key) t.category = 'others';
+  showCustomConfirm(msg, () => {
+    state.transactions.forEach(t => {
+      if (t.category === key) t.category = 'others';
+    });
+    delete customCategories[key];
+    saveCustomCategories();
+    saveData();
+    showToast('Categoria excluída.', 'success');
+    updateAll();
   });
-  delete customCategories[key];
-  saveCustomCategories();
-  saveData();
-  showToast('Categoria excluída.', 'success');
-  updateAll();
 }
 
 function loadTheme() {
@@ -407,6 +426,7 @@ function setupEventListeners() {
       closeConfirm();
       closeNewCategoryModal();
       closeMobileSidebar();
+      closeGenericConfirm();
     }
   });
 
@@ -455,6 +475,36 @@ function setupEventListeners() {
 
   const btnClearAllData = document.getElementById('btnClearAllData');
   if (btnClearAllData) btnClearAllData.addEventListener('click', clearAllData);
+
+  // Generic Confirm Modal (para confirm() nativo substituído)
+  const gcCancel = document.getElementById('genericConfirmCancel');
+  const gcAction = document.getElementById('genericConfirmAction');
+  const gcOverlay = document.getElementById('genericConfirmOverlay');
+  if (gcCancel) gcCancel.addEventListener('click', closeGenericConfirm);
+  if (gcAction) gcAction.addEventListener('click', () => {
+    if (typeof state.confirmCallback === 'function') state.confirmCallback();
+    closeGenericConfirm();
+  });
+  if (gcOverlay) gcOverlay.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeGenericConfirm();
+  });
+
+  // Metas de Economia
+  const btnAddGoal = document.getElementById('btnAddSavingsGoal');
+  if (btnAddGoal) btnAddGoal.addEventListener('click', openSavingsGoalForm);
+  const btnSaveGoal = document.getElementById('btnSaveSavingsGoal');
+  if (btnSaveGoal) btnSaveGoal.addEventListener('click', addSavingsGoal);
+  const btnCancelGoal = document.getElementById('btnCancelSavingsGoal');
+  if (btnCancelGoal) btnCancelGoal.addEventListener('click', closeSavingsGoalForm);
+
+  // Toggle parcelas em despesas (modal)
+  const modalExpenseInstallCheck = document.getElementById('modalExpenseInstallCheck');
+  if (modalExpenseInstallCheck) {
+    modalExpenseInstallCheck.addEventListener('change', () => {
+      const wrap = document.getElementById('modalExpenseInstallWrap');
+      if (wrap) wrap.style.display = modalExpenseInstallCheck.checked ? 'block' : 'none';
+    });
+  }
 }
 
 // ===== Navigation =====
@@ -478,6 +528,7 @@ function navigateTo(page) {
     'add-expense': ['Novo Registro', 'Cadastre uma nova transação'],
     categories: ['Categorias', 'Gastos organizados por categoria'],
     budgets: ['Orçamentos', 'Acompanhe as metas e limites de gastos por categoria'],
+    savings: ['Metas de Economia', 'Acompanhe suas metas de poupança'],
     reports: ['Relatórios', 'Análises detalhadas das suas finanças'],
     settings: ['Configurações', 'Backup e exportação de dados'],
   };
@@ -564,6 +615,7 @@ function updateAll() {
   renderCategories();
   updateReports();
   if (typeof renderBudgets === 'function') renderBudgets();
+  renderSavingsGoals();
 
   const greetText = document.getElementById('greetingText');
   if (greetText) {
@@ -573,6 +625,23 @@ function updateAll() {
     else if (hr >= 18) msg = 'Boa noite';
     greetText.textContent = `${msg}, seja bem-vindo!`;
   }
+}
+
+// Count-up animation
+function animateValue(element, targetValue, duration = 600) {
+  if (!element) return;
+  const startValue = parseFloat(element.dataset.rawValue || '0');
+  const startTime = performance.now();
+  const update = (timestamp) => {
+    const elapsed = timestamp - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+    const current = startValue + (targetValue - startValue) * eased;
+    element.textContent = formatCurrency(current);
+    if (progress < 1) requestAnimationFrame(update);
+    else element.dataset.rawValue = targetValue;
+  };
+  requestAnimationFrame(update);
 }
 
 function updateSummaryCards() {
@@ -589,9 +658,6 @@ function updateSummaryCards() {
 
   const investment = transactions.filter(t => t.type === 'investment').reduce((a, t) => a + t.amount, 0);
   
-  // Lógica especial para Empréstimos:
-  // Se for uma entrada (sem parcelaAtual), conta como "receita" de empréstimo.
-  // Se for uma parcela (com parcelaAtual), conta como "despesa" de empréstimo.
   const loanEntries = transactions.filter(t => t.type === 'loan' && !t.parcelaAtual).reduce((a, t) => a + t.amount, 0);
   const loanInstallments = transactions.filter(t => t.type === 'loan' && t.parcelaAtual)
     .filter(t => allCategories[t.category]?.countAsExpense !== false)
@@ -599,11 +665,45 @@ function updateSummaryCards() {
 
   const balance = (income + loanEntries) - (expense + investment + loanInstallments);
 
-  document.getElementById('totalIncome').textContent = formatCurrency(income + loanEntries);
-  document.getElementById('totalExpense').textContent = formatCurrency(expense);
-  document.getElementById('totalInvestment').textContent = formatCurrency(investment);
-  document.getElementById('totalLoan').textContent = formatCurrency(loanInstallments);
-  document.getElementById('totalBalance').textContent = formatCurrency(balance);
+  // Count-up animado nos 5 cards
+  animateValue(document.getElementById('totalIncome'), income + loanEntries);
+  animateValue(document.getElementById('totalExpense'), expense);
+  animateValue(document.getElementById('totalInvestment'), investment);
+  animateValue(document.getElementById('totalLoan'), loanInstallments);
+  animateValue(document.getElementById('totalBalance'), balance);
+
+  // Tendência vs mês anterior (aplicada a todos os cards)
+  const prevMonth = state.currentMonth - 1 < 0 ? 11 : state.currentMonth - 1;
+  const prevYear = state.currentMonth - 1 < 0 ? state.currentYear - 1 : state.currentYear;
+  const prevTx = state.transactions.filter(t => {
+    const d = new Date(t.date + 'T00:00:00');
+    return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
+  });
+  const prevIncome = prevTx.filter(t => t.type === 'income' || (t.type === 'loan' && !t.parcelaAtual)).reduce((a, t) => a + t.amount, 0);
+  const prevExpense = prevTx.filter(t => t.type === 'expense').filter(t => allCategories[t.category]?.countAsExpense !== false).reduce((a, t) => a + t.amount, 0);
+  const prevInvestment = prevTx.filter(t => t.type === 'investment').reduce((a, t) => a + t.amount, 0);
+  const prevLoan = prevTx.filter(t => t.type === 'loan' && t.parcelaAtual).reduce((a, t) => a + t.amount, 0);
+  const prevBalance = prevIncome - (prevExpense + prevInvestment + prevLoan);
+
+  function renderTrend(elementId, current, previous, invertColors = false) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    if (previous === 0) { el.innerHTML = ''; return; }
+    const diff = current - previous;
+    const pct = ((diff / previous) * 100).toFixed(1);
+    const isUp = diff >= 0;
+    const isGood = invertColors ? !isUp : isUp;
+    const color = isGood ? 'var(--color-income)' : 'var(--color-expense)';
+    const icon = isUp ? 'ri-arrow-up-s-fill' : 'ri-arrow-down-s-fill';
+    el.innerHTML = `<i class="${icon}" style="color:${color};"></i><span style="color:${color};">${isUp ? '+' : ''}${pct}%</span>`;
+  }
+  if (state.viewMode !== 'year') {  // Só no modo mensal
+    renderTrend('incomeTrend', income + loanEntries, prevIncome);
+    renderTrend('expenseTrend', expense, prevExpense, true); // invertido: subir é ruim
+    renderTrend('investmentTrend', investment, prevInvestment);
+    renderTrend('loanTrend', loanInstallments, prevLoan, true);
+    renderTrend('balanceTrend', balance, prevBalance);
+  }
 
   const isYear = state.viewMode === 'year';
   const periodLabel = document.getElementById('periodLabel');
@@ -615,7 +715,7 @@ function updateSummaryCards() {
   if (dailyBadge) dailyBadge.textContent = isYear ? 'Visão Anual' : 'Últimos 30 dias';
 
   const balanceEl = document.getElementById('totalBalance');
-  balanceEl.style.color = balance >= 0 ? 'var(--color-income)' : 'var(--color-expense)';
+  if (balanceEl) balanceEl.style.color = balance >= 0 ? 'var(--color-income)' : 'var(--color-expense)';
 }
 
 // ===== Charts =====
@@ -1999,6 +2099,28 @@ function closeConfirm() {
   state.deleteId = null;
 }
 
+// ===== Modal de Confirmação Genérico (substitui confirm() nativo) =====
+function showCustomConfirm(message, callback) {
+  const overlay = document.getElementById('genericConfirmOverlay');
+  const msgEl = document.getElementById('genericConfirmMessage');
+  if (!overlay || !msgEl) {
+    // Fallback se o elemento não existir no HTML ainda
+    if (confirm(message)) callback();
+    return;
+  }
+  msgEl.textContent = message;
+  state.confirmCallback = callback;
+  overlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeGenericConfirm() {
+  const overlay = document.getElementById('genericConfirmOverlay');
+  if (overlay) overlay.classList.remove('active');
+  document.body.style.overflow = '';
+  state.confirmCallback = null;
+}
+
 // ===== Default Dates =====
 function setDefaultDates() {
   const today = new Date();
@@ -2149,26 +2271,150 @@ function importDataJSON(event) {
 }
 
 function clearAllData() {
-  if (confirm('Tem certeza que deseja limpar TODOS os dados? Esta ação não pode ser desfeita.')) {
-    // Clear localStorage
+  showCustomConfirm('Tem certeza que deseja limpar TODOS os dados? Transações, categorias e configurações serão permanentemente removidos.', () => {
     localStorage.removeItem('gestaofinanceiragu_transactions');
     localStorage.removeItem(CUSTOM_CATEGORIES_KEY);
     localStorage.removeItem(BUDGETS_KEY);
     localStorage.removeItem('gestaofinanceiragu_theme');
     localStorage.removeItem('gestaofinanceiragu_initialized');
-
-    // Reset state
+    localStorage.removeItem(SAVINGS_GOALS_KEY);
     state.transactions = [];
     customCategories = {};
     defaultBudgets = {};
+    savingsGoals = [];
     state.theme = 'light';
-
-    // Save empty state
-    saveData();
-    localStorage.setItem('gestaofinanceiragu_theme', state.theme);
-
-    // Update UI
+    document.documentElement.setAttribute('data-theme', 'light');
     updateAll();
     showToast('Todos os dados foram limpos!', 'info');
+  });
+}
+
+// ===== METAS DE ECONOMIA =====
+function openSavingsGoalForm() {
+  const form = document.getElementById('savingsGoalForm');
+  if (form) form.style.display = 'block';
+  document.getElementById('goalName')?.focus();
+}
+
+function closeSavingsGoalForm() {
+  const form = document.getElementById('savingsGoalForm');
+  if (form) form.style.display = 'none';
+  ['goalName','goalTarget','goalCurrent','goalDate'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+}
+
+function addSavingsGoal() {
+  const name = document.getElementById('goalName')?.value.trim();
+  const targetAmount = parseFloat(document.getElementById('goalTarget')?.value);
+  const currentAmount = parseFloat(document.getElementById('goalCurrent')?.value) || 0;
+  const targetDate = document.getElementById('goalDate')?.value || '';
+
+  if (!name || !targetAmount || targetAmount <= 0) {
+    showToast('Preencha o nome e o valor da meta!', 'error');
+    return;
   }
+
+  savingsGoals.push({
+    id: Date.now(),
+    name,
+    targetAmount,
+    currentAmount,
+    targetDate,
+  });
+  saveSavingsGoals();
+  closeSavingsGoalForm();
+  renderSavingsGoals();
+  showToast('Meta criada com sucesso!', 'success');
+}
+
+function deleteSavingsGoal(id) {
+  showCustomConfirm('Excluir esta meta de economia?', () => {
+    savingsGoals = savingsGoals.filter(g => g.id !== id);
+    saveSavingsGoals();
+    renderSavingsGoals();
+    showToast('Meta removida.', 'info');
+  });
+}
+
+function updateSavingsGoalProgress(id, amount) {
+  const goal = savingsGoals.find(g => g.id === id);
+  if (!goal) return;
+  const newAmount = Math.max(0, goal.currentAmount + amount);
+  goal.currentAmount = newAmount;
+  saveSavingsGoals();
+  renderSavingsGoals();
+}
+
+function renderSavingsGoals() {
+  const container = document.getElementById('savingsGoalsList');
+  if (!container) return;
+
+  if (savingsGoals.length === 0) {
+    container.innerHTML = `
+      <div class="savings-goals-empty">>
+        <i class="ri-flag-2-line"></i>
+        <p>Nenhuma meta criada ainda.</p>
+        <small>Adicione uma meta de poupança para acompanhar seu progresso.</small>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = '';
+  savingsGoals.forEach(goal => {
+    const pct = Math.min(100, (goal.currentAmount / goal.targetAmount) * 100);
+    const remaining = Math.max(0, goal.targetAmount - goal.currentAmount);
+    const isComplete = pct >= 100;
+    let deadlineHtml = '';
+    if (goal.targetDate) {
+      const daysLeft = Math.ceil((new Date(goal.targetDate + 'T00:00:00') - new Date()) / 86400000);
+      const color = daysLeft < 0 ? 'var(--color-expense)' : daysLeft <= 30 ? 'var(--color-warning)' : 'var(--color-income)';
+      const label = daysLeft < 0 ? `Prazo encerrado` : daysLeft === 0 ? 'Vence hoje!' : `${daysLeft} dias restantes`;
+      deadlineHtml = `<span style="font-size:11px;color:${color};font-weight:600;"><i class="ri-time-line"></i> ${label}</span>`;
+    }
+
+    const card = document.createElement('div');
+    card.className = 'savings-goal-card' + (isComplete ? ' goal-complete' : '');
+    card.innerHTML = `
+      <div class="sg-header">
+        <div class="sg-info">
+          <span class="sg-name"></span>
+          ${deadlineHtml}
+        </div>
+        <button class="sg-delete" title="Excluir meta" aria-label="Excluir meta"><i class="ri-delete-bin-line"></i></button>
+      </div>
+      <div class="sg-values">
+        <span class="sg-current">${formatCurrency(goal.currentAmount)}</span>
+        <span class="sg-of">de</span>
+        <span class="sg-target">${formatCurrency(goal.targetAmount)}</span>
+        ${isComplete ? '<span class="sg-badge-complete"><i class="ri-checkbox-circle-fill"></i> Concluída</span>' : ''}
+      </div>
+      <div class="sg-progress-bar">
+        <div class="sg-progress-fill" style="width:${pct}%"></div>
+      </div>
+      <div class="sg-footer">
+        <span>${pct.toFixed(1)}% atingido • Faltam ${formatCurrency(remaining)}</span>
+        <div class="sg-actions">
+          <button class="btn btn-secondary sg-btn-add" style="padding:4px 12px;font-size:12px;" title="Adicionar valor"><i class="ri-add-line"></i> Adicionar</button>
+          <button class="btn sg-btn-withdraw" style="padding:4px 12px;font-size:12px;background:rgba(239,68,68,0.1);color:var(--color-expense);" title="Retirar valor"><i class="ri-subtract-line"></i> Retirar</button>
+        </div>
+      </div>
+    `;
+    // Usar textContent para o nome (XSS safe)
+    card.querySelector('.sg-name').textContent = goal.name;
+
+    card.querySelector('.sg-delete').addEventListener('click', () => deleteSavingsGoal(goal.id));
+    card.querySelector('.sg-btn-add').addEventListener('click', () => {
+      const v = parseFloat(prompt('Quanto adicionar à meta? (R$)') || '0');
+      if (!isNaN(v) && v > 0) updateSavingsGoalProgress(goal.id, v);
+    });
+    card.querySelector('.sg-btn-withdraw').addEventListener('click', () => {
+      const v = parseFloat(prompt('Quanto retirar da meta? (R$)') || '0');
+      if (!isNaN(v) && v > 0) updateSavingsGoalProgress(goal.id, -v);
+    });
+
+    container.appendChild(card);
+  });
 }

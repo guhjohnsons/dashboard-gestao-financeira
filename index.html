@@ -49,6 +49,10 @@
                     <i class="ri-wallet-3-line"></i>
                     Orçamentos
                 </button>
+                <button class="nav-item" data-page="savings" id="nav-savings">
+                    <i class="ri-flag-2-line"></i>
+                    Metas de Economia
+                </button>
 
                 <span class="nav-section-label">Análises</span>
                 <button class="nav-item" data-page="reports" id="nav-reports">
@@ -121,6 +125,7 @@
                             <div class="card-value" id="totalIncome">R$ 0,00</div>
                             <div class="card-comparison">
                                 <span id="periodLabel">entradas no período</span>
+                                <span class="card-trend" id="incomeTrend"></span>
                             </div>
                         </div>
                         <div class="summary-card expense">
@@ -130,8 +135,7 @@
                             </div>
                             <div class="card-value" id="totalExpense">R$ 0,00</div>
                             <div class="card-comparison">
-                                <i class="ri-arrow-down-s-fill down"></i>
-                                <span class="down" id="expenseChange">-0%</span>
+                                <span class="card-trend" id="expenseTrend"></span>
                             </div>
                         </div>
                         <div class="summary-card investment">
@@ -142,6 +146,7 @@
                             <div class="card-value" id="totalInvestment">R$ 0,00</div>
                             <div class="card-comparison">
                                 <span>aplicações no período</span>
+                                <span class="card-trend" id="investmentTrend"></span>
                             </div>
                         </div>
                         <div class="summary-card loan">
@@ -152,6 +157,7 @@
                             <div class="card-value" id="totalLoan">R$ 0,00</div>
                             <div class="card-comparison">
                                 <span>parcelas no período</span>
+                                <span class="card-trend" id="loanTrend"></span>
                             </div>
                         </div>
                         <div class="summary-card balance">
@@ -162,6 +168,7 @@
                             <div class="card-value" id="totalBalance">R$ 0,00</div>
                             <div class="card-comparison">
                                 <span>balanço do mês</span>
+                                <span class="card-trend" id="balanceTrend"></span>
                             </div>
                         </div>
                     </div>
@@ -348,6 +355,55 @@
 
                     <div class="budget-cards-grid" id="budgetSetupGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;">
                         <!-- pop JS -->
+                    </div>
+                </section>
+
+                <!-- ===== SAVINGS GOALS PAGE ===== -->
+                <section class="page-section" id="page-savings">
+                    <div class="transactions-header" style="background:var(--bg-card);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding-bottom:12px;margin-bottom:20px;border-bottom:none;">
+                        <div>
+                            <h3 style="margin-bottom:8px;"><i class="ri-flag-2-line" style="color:var(--accent-primary);margin-right:8px;"></i>Metas de Economia</h3>
+                            <p style="font-size:13px;color:var(--text-muted);">Crie metas de poupança e acompanhe seu progresso até atingí-las.</p>
+                        </div>
+                        <button class="btn btn-primary" id="btnAddSavingsGoal">
+                            <i class="ri-add-line"></i> Nova Meta
+                        </button>
+                    </div>
+
+                    <!-- Formulário para nova meta -->
+                    <div id="savingsGoalForm" style="display:none;" class="savings-goal-form-wrap">
+                        <div class="savings-goal-form">
+                            <h4><i class="ri-add-circle-line"></i> Nova Meta de Economia</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="goalName">Nome da Meta</label>
+                                    <input type="text" class="form-control" id="goalName" placeholder="Ex: Viagem, Reserva de emergência...">
+                                </div>
+                                <div class="form-group">
+                                    <label for="goalTarget">Valor Alvo (R$)</label>
+                                    <input type="number" class="form-control" id="goalTarget" placeholder="Ex: 5000" step="0.01" min="0.01">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="goalCurrent">Valor Atual (R$) <span style="color:var(--text-muted);font-weight:400;">(opcional)</span></label>
+                                    <input type="number" class="form-control" id="goalCurrent" placeholder="0,00" step="0.01" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="goalDate">Prazo <span style="color:var(--text-muted);font-weight:400;">(opcional)</span></label>
+                                    <input type="date" class="form-control" id="goalDate">
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:12px;justify-content:flex-end;">
+                                <button type="button" class="btn btn-secondary" id="btnCancelSavingsGoal">Cancelar</button>
+                                <button type="button" class="btn btn-primary" id="btnSaveSavingsGoal"><i class="ri-save-line"></i> Salvar Meta</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lista de metas -->
+                    <div id="savingsGoalsList" class="savings-goals-list">
+                        <!-- populado por JS -->
                     </div>
                 </section>
 
@@ -717,6 +773,25 @@
                         <button class="btn btn-secondary" id="confirmCancel">Cancelar</button>
                         <button class="btn btn-danger" id="confirmDelete">
                             <i class="ri-delete-bin-line"></i> Excluir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação Genérico -->
+    <div class="modal-overlay" id="genericConfirmOverlay">
+        <div class="modal" style="max-width: 420px;">
+            <div class="modal-body" style="padding: 32px;">
+                <div class="confirm-dialog">
+                    <i class="ri-alert-line" style="color:var(--color-warning);"></i>
+                    <h4>Confirmar Ação</h4>
+                    <p id="genericConfirmMessage"></p>
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" id="genericConfirmCancel">Cancelar</button>
+                        <button class="btn btn-danger" id="genericConfirmAction">
+                            <i class="ri-check-line"></i> Confirmar
                         </button>
                     </div>
                 </div>

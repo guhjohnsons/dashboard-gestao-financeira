@@ -2502,3 +2502,226 @@ h1, h2, h3, h4 {
     gap: 6px;
     flex-shrink: 0;
 }
+
+/* ===== Card Trend Indicators ===== */
+.card-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-left: auto;
+}
+
+.card-comparison {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+/* ===== Savings Goals ===== */
+.savings-goal-form-wrap {
+    margin-bottom: 24px;
+    animation: fadeIn 0.3s ease;
+}
+
+.savings-goal-form {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+}
+
+.savings-goal-form h4 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent-primary);
+}
+
+.savings-goals-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+.savings-goal-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-normal);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: relative;
+    overflow: hidden;
+}
+
+.savings-goal-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent-gradient);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.savings-goal-card.goal-complete::before {
+    background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.savings-goal-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.sg-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.sg-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sg-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.sg-delete {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.sg-delete:hover {
+    background: var(--color-expense-light);
+    color: var(--color-expense);
+}
+
+.sg-values {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.sg-current {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--accent-primary);
+}
+
+.sg-of {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.sg-target {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.sg-badge-complete {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    margin-left: auto;
+}
+
+.sg-progress-bar {
+    height: 8px;
+    background: var(--bg-input);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.sg-progress-fill {
+    height: 100%;
+    background: var(--accent-gradient);
+    border-radius: var(--radius-full);
+    transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.goal-complete .sg-progress-fill {
+    background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.sg-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.sg-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.savings-goals-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 40px;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.savings-goals-empty i {
+    font-size: 48px;
+    opacity: 0.3;
+}
+
+.savings-goals-empty p {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.savings-goals-empty small {
+    font-size: 13px;
+    max-width: 300px;
+}
+
+@media (max-width: 768px) {
+    .savings-goals-list {
+        grid-template-columns: 1fr;
+    }
+    .sg-footer {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
