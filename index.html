@@ -9,7 +9,9 @@
     <title>Dashboard de Gastos</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Outfit:wght@500;600;700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -84,7 +86,8 @@
                         <i class="ri-menu-line"></i>
                     </button>
                     <div class="header-left">
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:-4px;" id="greetingText">Olá, bem-vindo!</div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:-4px;" id="greetingText">Olá,
+                            bem-vindo!</div>
                         <h2 id="pageTitle">Dashboard</h2>
                         <p id="pageSubtitle">Visão geral das suas finanças</p>
                     </div>
@@ -103,7 +106,8 @@
                             <i class="ri-arrow-right-s-line"></i>
                         </button>
                     </div>
-                    <button class="btn btn-outline" id="btnToday" style="font-size: 13px; font-weight: 600; padding: 0 12px; height: 38px;">Hoje</button>
+                    <button class="btn btn-outline" id="btnToday"
+                        style="font-size: 13px; font-weight: 600; padding: 0 12px; height: 38px;">Hoje</button>
                     <button class="btn btn-primary" id="btnAddNew" type="button">
                         <i class="ri-add-line"></i>
                         <span class="btn-text-desktop">Adicionar Registro</span>
@@ -175,12 +179,18 @@
 
                     <!-- Botões de Acesso Rápido -->
                     <div style="margin-bottom: 28px;">
-                        <div style="display:flex; gap:12px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none;" class="quick-actions-bar">
-                            <span style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:flex; align-items:center; padding-right:8px;">Atalhos:</span>
-                            <button class="filter-chip quick-action-btn" data-qa-type="income"><i class="ri-arrow-up-circle-line" style="margin-right:6px;"></i>Receita</button>
-                            <button class="filter-chip quick-action-btn" data-qa-type="investment"><i class="ri-line-chart-line" style="margin-right:6px;"></i>Investimento</button>
-                            <button class="filter-chip quick-action-btn" data-qa-type="expense"><i class="ri-arrow-down-circle-line" style="margin-right:6px;"></i>Despesa</button>
-                            <button class="filter-chip quick-action-btn" data-qa-type="loan"><i class="ri-hand-coin-line" style="margin-right:6px;"></i>Empréstimo</button>
+                        <div style="display:flex; gap:12px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none;"
+                            class="quick-actions-bar">
+                            <span
+                                style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:flex; align-items:center; padding-right:8px;">Atalhos:</span>
+                            <button class="filter-chip quick-action-btn" data-qa-type="income"><i
+                                    class="ri-arrow-up-circle-line" style="margin-right:6px;"></i>Receita</button>
+                            <button class="filter-chip quick-action-btn" data-qa-type="investment"><i
+                                    class="ri-line-chart-line" style="margin-right:6px;"></i>Investimento</button>
+                            <button class="filter-chip quick-action-btn" data-qa-type="expense"><i
+                                    class="ri-arrow-down-circle-line" style="margin-right:6px;"></i>Despesa</button>
+                            <button class="filter-chip quick-action-btn" data-qa-type="loan"><i
+                                    class="ri-hand-coin-line" style="margin-right:6px;"></i>Empréstimo</button>
                         </div>
                     </div>
 
@@ -207,7 +217,8 @@
                         <div class="budget-section quick-budgets-section">
                             <div class="budget-header">
                                 <h3>Metas do Mês</h3>
-                                <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="navigateTo('budgets')">Ver metas</button>
+                                <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px;"
+                                    onclick="navigateTo('budgets')">Ver metas</button>
                             </div>
                             <div id="quickBudgetsList" style="display:flex;flex-direction:column;gap:16px;">
                                 <!-- pop JS -->
@@ -215,17 +226,55 @@
                         </div>
                     </div>
 
-                    <!-- Recent Transactions -->
-                    <div class="transactions-section">
-                        <div class="transactions-header">
-                            <h3>Transações Recentes</h3>
-                            <button class="btn btn-secondary" onclick="navigateTo('transactions')">
-                                Ver todas <i class="ri-arrow-right-line"></i>
-                            </button>
+                    <!-- Widgets Draggáveis -->
+                    <div id="dashboardWidgets" class="dashboard-widgets">
+
+                        <!-- Widget: Metas de Economia -->
+                        <div class="dash-widget" data-widget-id="savings" draggable="true">
+                            <div class="transactions-section">
+                                <div class="transactions-header">
+                                    <div style="display:flex;align-items:center;gap:10px;">
+                                        <span class="drag-handle" title="Arrastar para reordenar">
+                                            <i class="ri-drag-move-2-line"></i>
+                                        </span>
+                                        <div style="width:32px;height:32px;background:rgba(16,185,129,0.12);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                                            <i class="ri-flag-2-line" style="color:var(--color-income);font-size:16px;"></i>
+                                        </div>
+                                        <div>
+                                            <h3 style="margin:0;font-size:15px;">Metas de Economia</h3>
+                                            <p style="font-size:11px;color:var(--text-muted);margin:0;">Acompanhe seu progresso</p>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-secondary" onclick="navigateTo('savings')" style="font-size:11px;padding:4px 12px;">
+                                        Ver todas <i class="ri-arrow-right-line"></i>
+                                    </button>
+                                </div>
+                                <div id="quickSavingsList" style="padding: 8px 0;">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
                         </div>
-                        <div class="transactions-list" id="recentTransactions">
-                            <!-- Populated by JS -->
+
+                        <!-- Widget: Transações Recentes -->
+                        <div class="dash-widget" data-widget-id="transactions" draggable="true">
+                            <div class="transactions-section">
+                                <div class="transactions-header">
+                                    <div style="display:flex;align-items:center;gap:10px;">
+                                        <span class="drag-handle" title="Arrastar para reordenar">
+                                            <i class="ri-drag-move-2-line"></i>
+                                        </span>
+                                        <h3>Transações Recentes</h3>
+                                    </div>
+                                    <button class="btn btn-secondary" onclick="navigateTo('transactions')">
+                                        Ver todas <i class="ri-arrow-right-line"></i>
+                                    </button>
+                                </div>
+                                <div class="transactions-list" id="recentTransactions">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
                         </div>
+
                     </div>
                 </section>
 
@@ -237,7 +286,8 @@
                             <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end;">
                                 <div class="search-bar-wrap">
                                     <i class="ri-search-line"></i>
-                                    <input type="text" id="transactionSearch" class="search-input" placeholder="Buscar por descrição...">
+                                    <input type="text" id="transactionSearch" class="search-input"
+                                        placeholder="Buscar por descrição...">
                                 </div>
                                 <div class="transactions-filters">
                                     <button class="filter-chip active" data-filter="all">Todas</button>
@@ -346,24 +396,31 @@
 
                 <!-- ===== BUDGETS PAGE ===== -->
                 <section class="page-section" id="page-budgets">
-                    <div class="transactions-header" style="background:var(--bg-card);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding-bottom:12px;margin-bottom:20px;border-bottom:none;">
+                    <div class="transactions-header"
+                        style="background:var(--bg-card);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding-bottom:12px;margin-bottom:20px;border-bottom:none;">
                         <div>
-                            <h3 style="margin-bottom:8px;"><i class="ri-target-line" style="color:var(--accent-primary);margin-right:8px;"></i>Metas de Gastos</h3>
-                            <p style="font-size:13px;color:var(--text-muted);">Defina limites de gastos para suas categorias (Apenas para Despesas).</p>
+                            <h3 style="margin-bottom:8px;"><i class="ri-target-line"
+                                    style="color:var(--accent-primary);margin-right:8px;"></i>Metas de Gastos</h3>
+                            <p style="font-size:13px;color:var(--text-muted);">Defina limites de gastos para suas
+                                categorias (Apenas para Despesas).</p>
                         </div>
                     </div>
 
-                    <div class="budget-cards-grid" id="budgetSetupGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;">
+                    <div class="budget-cards-grid" id="budgetSetupGrid"
+                        style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;">
                         <!-- pop JS -->
                     </div>
                 </section>
 
                 <!-- ===== SAVINGS GOALS PAGE ===== -->
                 <section class="page-section" id="page-savings">
-                    <div class="transactions-header" style="background:var(--bg-card);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding-bottom:12px;margin-bottom:20px;border-bottom:none;">
+                    <div class="transactions-header"
+                        style="background:var(--bg-card);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding-bottom:12px;margin-bottom:20px;border-bottom:none;">
                         <div>
-                            <h3 style="margin-bottom:8px;"><i class="ri-flag-2-line" style="color:var(--accent-primary);margin-right:8px;"></i>Metas de Economia</h3>
-                            <p style="font-size:13px;color:var(--text-muted);">Crie metas de poupança e acompanhe seu progresso até atingí-las.</p>
+                            <h3 style="margin-bottom:8px;"><i class="ri-flag-2-line"
+                                    style="color:var(--accent-primary);margin-right:8px;"></i>Metas de Economia</h3>
+                            <p style="font-size:13px;color:var(--text-muted);">Crie metas de poupança e acompanhe seu
+                                progresso até atingí-las.</p>
                         </div>
                         <button class="btn btn-primary" id="btnAddSavingsGoal">
                             <i class="ri-add-line"></i> Nova Meta
@@ -377,26 +434,33 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="goalName">Nome da Meta</label>
-                                    <input type="text" class="form-control" id="goalName" placeholder="Ex: Viagem, Reserva de emergência...">
+                                    <input type="text" class="form-control" id="goalName"
+                                        placeholder="Ex: Viagem, Reserva de emergência...">
                                 </div>
                                 <div class="form-group">
                                     <label for="goalTarget">Valor Alvo (R$)</label>
-                                    <input type="number" class="form-control" id="goalTarget" placeholder="Ex: 5000" step="0.01" min="0.01">
+                                    <input type="number" class="form-control" id="goalTarget" placeholder="Ex: 5000"
+                                        step="0.01" min="0.01">
                                 </div>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="goalCurrent">Valor Atual (R$) <span style="color:var(--text-muted);font-weight:400;">(opcional)</span></label>
-                                    <input type="number" class="form-control" id="goalCurrent" placeholder="0,00" step="0.01" min="0">
+                                    <label for="goalCurrent">Valor Atual (R$) <span
+                                            style="color:var(--text-muted);font-weight:400;">(opcional)</span></label>
+                                    <input type="number" class="form-control" id="goalCurrent" placeholder="0,00"
+                                        step="0.01" min="0">
                                 </div>
                                 <div class="form-group">
-                                    <label for="goalDate">Prazo <span style="color:var(--text-muted);font-weight:400;">(opcional)</span></label>
+                                    <label for="goalDate">Prazo <span
+                                            style="color:var(--text-muted);font-weight:400;">(opcional)</span></label>
                                     <input type="date" class="form-control" id="goalDate">
                                 </div>
                             </div>
                             <div style="display:flex;gap:12px;justify-content:flex-end;">
-                                <button type="button" class="btn btn-secondary" id="btnCancelSavingsGoal">Cancelar</button>
-                                <button type="button" class="btn btn-primary" id="btnSaveSavingsGoal"><i class="ri-save-line"></i> Salvar Meta</button>
+                                <button type="button" class="btn btn-secondary"
+                                    id="btnCancelSavingsGoal">Cancelar</button>
+                                <button type="button" class="btn btn-primary" id="btnSaveSavingsGoal"><i
+                                        class="ri-save-line"></i> Salvar Meta</button>
                             </div>
                         </div>
                     </div>
@@ -460,6 +524,9 @@
                             </button>
                             <button class="report-tab" data-tab="investments">
                                 <i class="ri-funds-line"></i> Investimentos
+                            </button>
+                            <button class="report-tab" data-tab="incomes">
+                                <i class="ri-arrow-up-circle-line"></i> Receitas
                             </button>
                         </div>
                     </div>
@@ -573,6 +640,55 @@
                         </div>
                     </div>
 
+                    <!-- Tab: Incomes -->
+                    <div class="report-tab-content" id="report-tab-incomes">
+                        <!-- KPIs de Receita -->
+                        <div class="stats-mini-grid reports-kpi-grid" style="margin-bottom: 20px;">
+                            <div class="stat-mini-card">
+                                <i class="ri-arrow-up-circle-line" style="color: var(--color-income);"></i>
+                                <div class="stat-value" id="incomeTotalReport">R$ 0,00</div>
+                                <div class="stat-label">Total de Receitas</div>
+                            </div>
+                            <div class="stat-mini-card">
+                                <i class="ri-trophy-line" style="color: var(--color-warning);"></i>
+                                <div class="stat-value" id="incomeBiggestReport">R$ 0,00</div>
+                                <div class="stat-label">Maior Receita</div>
+                            </div>
+                            <div class="stat-mini-card">
+                                <i class="ri-calculator-line" style="color: var(--accent-primary);"></i>
+                                <div class="stat-value" id="incomeAvgReport">R$ 0,00</div>
+                                <div class="stat-label">Ticket Médio</div>
+                            </div>
+                            <div class="stat-mini-card">
+                                <i class="ri-list-check-3" style="color: #10b981;"></i>
+                                <div class="stat-value" id="incomeCountReport">0</div>
+                                <div class="stat-label">Nº de Entradas</div>
+                            </div>
+                        </div>
+
+                        <!-- Gráfico + Tabela -->
+                        <div class="charts-grid charts-grid-equal">
+                            <div class="chart-card">
+                                <div class="chart-card-header">
+                                    <h3>Histórico de Receitas</h3>
+                                    <span class="badge">Últimos 12 meses</span>
+                                </div>
+                                <div class="chart-container">
+                                    <canvas id="incomeHistoryChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-card">
+                                <div class="chart-card-header">
+                                    <h3>Receitas por Categoria</h3>
+                                    <span class="badge">Detalhado</span>
+                                </div>
+                                <div class="report-table-wrapper" id="incomeTableWrapper">
+                                    <!-- populated by JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </section>
                 <!-- ===== SETTINGS / BACKUP PAGE ===== -->
                 <section class="page-section" id="page-settings">
@@ -655,7 +771,8 @@
         <div class="modal">
             <div class="modal-header">
                 <h3 id="modalTitle">Nova Transação</h3>
-                <button class="modal-close" id="modalClose" aria-label="Fechar modal"><i class="ri-close-line"></i></button>
+                <button class="modal-close" id="modalClose" aria-label="Fechar modal"><i
+                        class="ri-close-line"></i></button>
             </div>
             <div class="modal-body">
                 <form id="expenseForm" autocomplete="off">
@@ -668,10 +785,12 @@
                             <button type="button" class="type-btn income-type" data-type="income" id="modalTypeIncome">
                                 <i class="ri-arrow-up-circle-line"></i> Receita
                             </button>
-                            <button type="button" class="type-btn investment-type" data-type="investment" id="modalTypeInvestment">
+                            <button type="button" class="type-btn investment-type" data-type="investment"
+                                id="modalTypeInvestment">
                                 <i class="ri-line-chart-line"></i> Investimento
                             </button>
-                            <button type="button" class="type-btn expense-type active" data-type="expense" id="modalTypeExpense">
+                            <button type="button" class="type-btn expense-type active" data-type="expense"
+                                id="modalTypeExpense">
                                 <i class="ri-arrow-down-circle-line"></i> Despesa
                             </button>
                             <button type="button" class="type-btn loan-type" data-type="loan" id="modalTypeLoan">
@@ -690,8 +809,8 @@
                     <div class="form-row">
                         <div class="form-group" style="margin-bottom:0;">
                             <label for="modalAmount">Valor (R$)</label>
-                            <input type="number" class="form-control" id="modalAmount"
-                                placeholder="0,00" step="0.01" min="0.01" required>
+                            <input type="number" class="form-control" id="modalAmount" placeholder="0,00" step="0.01"
+                                min="0.01" required>
                         </div>
                         <div class="form-group" style="margin-bottom:0;">
                             <label for="modalDate">Data</label>
@@ -705,7 +824,8 @@
                         <select class="form-control" id="modalCategory" required>
                             <option value="">Selecione uma categoria...</option>
                         </select>
-                        <div class="form-group" id="modalNovaCategoriaWrap" style="display: none; margin-top: 10px; margin-bottom:0;">
+                        <div class="form-group" id="modalNovaCategoriaWrap"
+                            style="display: none; margin-top: 10px; margin-bottom:0;">
                             <label for="modalNovaCategoriaNome">Nome da nova categoria</label>
                             <input type="text" class="form-control" id="modalNovaCategoriaNome"
                                 placeholder="Ex: Academia, Streaming...">
@@ -719,36 +839,39 @@
                             <span>Detalhes do Empréstimo</span>
                         </div>
                         <p class="loan-helper-text">
-                            A entrada será registrada como receita. As parcelas são agendadas automaticamente como despesas nos meses seguintes.
+                            A entrada será registrada como receita. As parcelas são agendadas automaticamente como
+                            despesas nos meses seguintes.
                         </p>
                         <div class="form-row">
                             <div class="form-group" style="margin-bottom:0;">
                                 <label for="modalParcelasTotal">Nº de Parcelas</label>
-                                <input type="number" class="form-control" id="modalParcelasTotal"
-                                    placeholder="Ex: 12" min="1" max="999">
+                                <input type="number" class="form-control" id="modalParcelasTotal" placeholder="Ex: 12"
+                                    min="1" max="999">
                             </div>
                             <div class="form-group" style="margin-bottom:0;">
                                 <label for="modalParcelaValor">Valor da Parcela (R$)</label>
-                                <input type="number" class="form-control" id="modalParcelaValor"
-                                    placeholder="0,00" step="0.01">
+                                <input type="number" class="form-control" id="modalParcelaValor" placeholder="0,00"
+                                    step="0.01">
                             </div>
                         </div>
                         <div class="form-group" style="margin-top:14px; margin-bottom:0;">
                             <label for="modalParcelaAtual">Parcela Atual
-                                <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted);">(opcional — para registrar parcela avulsa)</span>
+                                <span
+                                    style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted);">(opcional
+                                    — para registrar parcela avulsa)</span>
                             </label>
-                            <input type="number" class="form-control" id="modalParcelaAtual"
-                                placeholder="Ex: 3" min="1" max="999">
+                            <input type="number" class="form-control" id="modalParcelaAtual" placeholder="Ex: 3" min="1"
+                                max="999">
                         </div>
                     </div>
 
                     <!-- Observações -->
                     <div class="form-group" style="margin-top:18px; margin-bottom:0;">
                         <label for="modalNotes">Observações
-                            <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted);">(opcional)</span>
+                            <span
+                                style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted);">(opcional)</span>
                         </label>
-                        <input type="text" class="form-control" id="modalNotes"
-                            placeholder="Notas adicionais...">
+                        <input type="text" class="form-control" id="modalNotes" placeholder="Notas adicionais...">
                     </div>
                 </form>
             </div>
@@ -835,6 +958,31 @@
                 <button class="btn btn-secondary" id="newCategoryCancel" type="button">Cancelar</button>
                 <button class="btn btn-primary" id="newCategorySave" type="button">
                     <i class="ri-add-line"></i> Adicionar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal - Savings Progress -->
+    <div class="modal-overlay" id="modalSavingsProgressOverlay">
+        <div class="modal" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 id="modalSavingsProgressTitle">Atualizar Meta</h3>
+                <button class="modal-close" id="modalSavingsProgressClose" aria-label="Fechar modal"><i class="ri-close-line"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 24px;">
+                <p id="modalSavingsProgressDesc" style="color:var(--text-muted);font-size:14px;margin-bottom:16px;">Informe o valor para adicionar ou retirar da meta.</p>
+                <form id="savingsProgressForm" autocomplete="off">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="modalSavingsProgressAmount">Valor (R$)</label>
+                        <input type="number" class="form-control" id="modalSavingsProgressAmount" placeholder="0,00" step="0.01" min="0.01" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modalSavingsProgressCancel" type="button">Cancelar</button>
+                <button class="btn btn-primary" id="modalSavingsProgressSave" type="button">
+                    <i class="ri-save-line"></i> Confirmar
                 </button>
             </div>
         </div>

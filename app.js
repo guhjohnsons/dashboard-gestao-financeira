@@ -28,6 +28,7 @@ const CATEGORIES = {
 };
 const CUSTOM_CATEGORIES_KEY = 'gestaofinanceiragu_custom_categories';
 const BUDGETS_KEY = 'gestaofinanceiragu_budgets';
+const WIDGET_ORDER_KEY = 'gestaofinanceiragu_widget_order';
 let customCategories = {}; // { id: { name, icon, emoji, color, budget, type } }
 let defaultBudgets = {}; // { id: amount }
 
@@ -65,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadTheme();
   loadSavingsGoals();
   setupEventListeners();
+  initDashboardWidgets();
   setDefaultDates();
   populateCategorySelects();
   setupCategoryAndParcelasListeners();
@@ -396,6 +398,18 @@ function setupEventListeners() {
     }
   });
 
+  // Modal Savings Progress
+  document.getElementById('modalSavingsProgressClose')?.addEventListener('click', closeSavingsProgressModal);
+  document.getElementById('modalSavingsProgressCancel')?.addEventListener('click', closeSavingsProgressModal);
+  document.getElementById('modalSavingsProgressSave')?.addEventListener('click', saveSavingsProgress);
+  document.getElementById('modalSavingsProgressOverlay')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeSavingsProgressModal();
+  });
+  document.getElementById('savingsProgressForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    saveSavingsProgress();
+  });
+
   // Filters
   document.querySelectorAll('.filter-chip').forEach(chip => {
     chip.addEventListener('click', () => {
@@ -507,6 +521,90 @@ function setupEventListeners() {
   }
 }
 
+// ===== Dashboard Widget Drag-and-Drop =====
+function initDashboardWidgets() {
+  const container = document.getElementById('dashboardWidgets');
+  if (!container) return;
+
+  // Restaurar ordem salva
+  try {
+    const saved = localStorage.getItem(WIDGET_ORDER_KEY);
+    if (saved) {
+      const order = JSON.parse(saved);
+      order.forEach(id => {
+        const el = container.querySelector(`[data-widget-id="${id}"]`);
+        if (el) container.appendChild(el);
+      });
+    }
+  } catch (_) {}
+
+  let dragSrc = null;
+
+  function getWidgets() {
+    return [...container.querySelectorAll('.dash-widget')];
+  }
+
+  function saveWidgetOrder() {
+    const order = getWidgets().map(w => w.dataset.widgetId);
+    localStorage.setItem(WIDGET_ORDER_KEY, JSON.stringify(order));
+  }
+
+  container.querySelectorAll('.dash-widget').forEach(widget => {
+    const handle = widget.querySelector('.drag-handle');
+
+    // Só inicia drag ao clicar no handle
+    handle?.addEventListener('mousedown', () => {
+      widget.draggable = true;
+    });
+    handle?.addEventListener('touchstart', () => {
+      widget.draggable = true;
+    }, { passive: true });
+
+    widget.addEventListener('dragstart', (e) => {
+      dragSrc = widget;
+      widget.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', widget.dataset.widgetId);
+    });
+
+    widget.addEventListener('dragend', () => {
+      widget.classList.remove('dragging');
+      widget.draggable = false;
+      getWidgets().forEach(w => w.classList.remove('drag-over'));
+      saveWidgetOrder();
+      // Re-renderiza gráficos pois o canvas pode ter sido movido no DOM
+      updateCharts();
+    });
+
+    widget.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      getWidgets().forEach(w => w.classList.remove('drag-over'));
+      if (widget !== dragSrc) widget.classList.add('drag-over');
+    });
+
+    widget.addEventListener('dragleave', () => {
+      widget.classList.remove('drag-over');
+    });
+
+    widget.addEventListener('drop', (e) => {
+      e.preventDefault();
+      widget.classList.remove('drag-over');
+      if (dragSrc && dragSrc !== widget) {
+        // Determina posição relativa e insere
+        const widgets = getWidgets();
+        const srcIdx = widgets.indexOf(dragSrc);
+        const tgtIdx = widgets.indexOf(widget);
+        if (srcIdx < tgtIdx) {
+          container.insertBefore(dragSrc, widget.nextSibling);
+        } else {
+          container.insertBefore(dragSrc, widget);
+        }
+      }
+    });
+  });
+}
+
 // ===== Navigation =====
 function navigateTo(page) {
   state.currentPage = page;
@@ -587,7 +685,9 @@ function updateMonthDisplay() {
 // ===== Filtering =====
 function getFilteredTransactions() {
   return state.transactions.filter(t => {
+    if (!t.date) return false;
     const d = new Date(t.date + 'T00:00:00');
+    if (isNaN(d.getTime())) return false; // ignora datas inválidas
     if (state.viewMode === 'year') {
       return d.getFullYear() === state.currentYear;
     }
@@ -595,7 +695,7 @@ function getFilteredTransactions() {
   });
 }
 
-// ===== Currency Format =====
+// ===== Currency & HTML Utils =====
 function formatCurrency(value) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -603,6 +703,17 @@ function formatCurrency(value) {
 function formatDate(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+}
+
+// Proteção XSS: escapa caracteres especiais antes de inserir no innerHTML
+function escapeHTML(str) {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // ===== Update Everything =====
@@ -616,6 +727,7 @@ function updateAll() {
   updateReports();
   if (typeof renderBudgets === 'function') renderBudgets();
   renderSavingsGoals();
+  renderQuickSavingsGoals();
 
   const greetText = document.getElementById('greetingText');
   if (greetText) {
@@ -722,6 +834,7 @@ function updateSummaryCards() {
 let dailyChart, categoryChart, comparisonChart, trendChart;
 let typeDistributionChart, categoryRankingChart, cumulativeChart;
 let investmentAllocationChart, investmentHistoryChart;
+let incomeHistoryChart;
 
 function getChartColors() {
   const isDark = state.theme === 'dark';
@@ -748,6 +861,7 @@ function updateCharts() {
   if (cumulativeChart) cumulativeChart.destroy();
   if (investmentAllocationChart) investmentAllocationChart.destroy();
   if (investmentHistoryChart) investmentHistoryChart.destroy();
+  if (incomeHistoryChart) incomeHistoryChart.destroy();
 
   updateDailyChart(transactions, colors);
   updateCategoryChart(transactions, colors);
@@ -760,6 +874,7 @@ function updateCharts() {
     updateCategoryRankingChart(transactions, colors);
     updateInvestmentAllocationChart(transactions, colors);
     updateInvestmentHistoryChart(colors);
+    updateIncomeHistoryChart(colors);
   }
 }
 
@@ -1343,6 +1458,8 @@ function createTransactionHTML(t) {
   const amountClass = isIncome ? 'income' : 'expense';
   const amountPrefix = isIncome ? '+ ' : '- ';
   const parcelasInfo = (t.parcelas && t.parcelaAtual) ? ` (${t.parcelaAtual}/${t.parcelas})` : (t.parcelas ? ` (${t.parcelas} parcelas)` : '');
+  const safeName = escapeHTML(t.name);
+  const safeCatName = escapeHTML(cat.name);
 
   return `
     <div class="transaction-item" data-id="${t.id}">
@@ -1350,8 +1467,8 @@ function createTransactionHTML(t) {
         <i class="${cat.icon}"></i>
       </div>
       <div class="transaction-info">
-        <div class="transaction-name">${t.name}</div>
-        <div class="transaction-category">${cat.name}${parcelasInfo}</div>
+        <div class="transaction-name">${safeName}</div>
+        <div class="transaction-category">${safeCatName}${parcelasInfo}</div>
       </div>
       <div class="transaction-date">${formatDate(t.date)}</div>
       <div class="transaction-amount ${amountClass}">
@@ -1697,6 +1814,24 @@ function updateReports() {
 
   // Top expenses table
   renderTopExpensesTable(transactions);
+
+  // ===== Receitas KPIs =====
+  const incomeTransactions = transactions.filter(t => t.type === 'income' || (t.type === 'loan' && !t.parcelaAtual));
+  const totalIncomeRep = incomeTransactions.reduce((a, t) => a + t.amount, 0);
+  const biggestIncome = incomeTransactions.length > 0 ? Math.max(...incomeTransactions.map(t => t.amount)) : 0;
+  const avgIncome = incomeTransactions.length > 0 ? totalIncomeRep / incomeTransactions.length : 0;
+
+  const itEl = document.getElementById('incomeTotalReport');
+  if (itEl) { itEl.textContent = formatCurrency(totalIncomeRep); itEl.style.color = 'var(--color-income)'; }
+  const ibEl = document.getElementById('incomeBiggestReport');
+  if (ibEl) ibEl.textContent = formatCurrency(biggestIncome);
+  const iaEl = document.getElementById('incomeAvgReport');
+  if (iaEl) iaEl.textContent = formatCurrency(avgIncome);
+  const icEl = document.getElementById('incomeCountReport');
+  if (icEl) icEl.textContent = incomeTransactions.length;
+
+  // Income table
+  renderIncomeTable(incomeTransactions);
 }
 
 function renderCategoryTable(transactions) {
@@ -1792,6 +1927,117 @@ function renderTopExpensesTable(transactions) {
         </div>
       </td>
       <td style="color:var(--color-expense);">${formatCurrency(t.amount)}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  wrapper.innerHTML = html;
+}
+
+// ===== Income History Chart =====
+function updateIncomeHistoryChart(colors) {
+  const canvas = document.getElementById('incomeHistoryChart');
+  if (!canvas) return;
+
+  const labels = [];
+  const incData = [];
+
+  for (let i = 11; i >= 0; i--) {
+    let m = state.currentMonth - i;
+    let y = state.currentYear;
+    if (m < 0) { m += 12; y--; }
+    labels.push(`${MONTH_NAMES[m].substring(0, 3)}/${String(y).slice(2)}`);
+
+    const monthTx = state.transactions.filter(t => {
+      const d = new Date(t.date + 'T00:00:00');
+      return d.getMonth() === m && d.getFullYear() === y;
+    });
+    incData.push(monthTx.filter(t => t.type === 'income' || (t.type === 'loan' && !t.parcelaAtual)).reduce((a, t) => a + t.amount, 0));
+  }
+
+  incomeHistoryChart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Receitas',
+        data: incData,
+        backgroundColor: 'rgba(34, 197, 94, 0.7)',
+        borderColor: '#22c55e',
+        borderWidth: 1,
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: colors.textColor, font: { family: 'DM Sans', size: 11 }, boxWidth: 12, padding: 16 } },
+        tooltip: {
+          backgroundColor: colors.tooltipBg, titleColor: colors.tooltipText, bodyColor: colors.tooltipText,
+          borderColor: colors.tooltipBorder, borderWidth: 1, cornerRadius: 8, padding: 12,
+          callbacks: { label: ctx => `${formatCurrency(ctx.raw)}` }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: colors.textColor, font: { family: 'DM Sans', size: 11 } } },
+        y: {
+          grid: { color: colors.gridColor },
+          ticks: { color: colors.textColor, font: { family: 'DM Sans', size: 10 }, callback: v => `R$${v}` },
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+
+// ===== Income Category Table =====
+function renderIncomeTable(incomeTransactions) {
+  const wrapper = document.getElementById('incomeTableWrapper');
+  if (!wrapper) return;
+
+  if (incomeTransactions.length === 0) {
+    wrapper.innerHTML = `<div class="empty-state" style="padding: 30px 20px;"><i class="ri-inbox-2-line"></i><h4>Sem dados</h4><p>Nenhuma receita no período.</p></div>`;
+    return;
+  }
+
+  // Agrupar por categoria
+  const catTotals = {};
+  const catCounts = {};
+  incomeTransactions.forEach(t => {
+    catTotals[t.category] = (catTotals[t.category] || 0) + t.amount;
+    catCounts[t.category] = (catCounts[t.category] || 0) + 1;
+  });
+
+  const grandTotal = incomeTransactions.reduce((a, t) => a + t.amount, 0);
+  const sorted = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+
+  let html = `<table class="report-table">
+    <thead><tr>
+      <th>#</th>
+      <th>Categoria</th>
+      <th>Qtd</th>
+      <th>Progresso</th>
+      <th>Total</th>
+    </tr></thead>
+    <tbody>`;
+
+  sorted.forEach(([key, total], i) => {
+    const cat = getCategory(key);
+    const count = catCounts[key] || 0;
+    const pct = grandTotal > 0 ? (total / grandTotal * 100).toFixed(1) : 0;
+    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    html += `<tr>
+      <td><span class="rank-badge ${rankClass}">${i + 1}</span></td>
+      <td><span class="cat-dot" style="background:${cat.color};"></span>${cat.name}</td>
+      <td style="color:var(--text-muted);">${count}</td>
+      <td>
+        <div class="report-bar-wrap">
+          <div class="report-bar-bg"><div class="report-bar-fill" style="width:${pct}%;background:${cat.color || 'var(--color-income)'};"></div></div>
+          <span style="font-size:11px;color:var(--text-muted);min-width:36px;text-align:right;">${pct}%</span>
+        </div>
+      </td>
+      <td style="color:var(--color-income);font-weight:600;">${formatCurrency(total)}</td>
     </tr>`;
   });
 
@@ -2168,9 +2414,12 @@ function showToast(message, type = 'info') {
 // ===== Export & Import =====
 function exportDataJSON() {
   const exportObject = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
     transactions: state.transactions,
     customCategories: customCategories,
-    defaultBudgets: defaultBudgets
+    defaultBudgets: defaultBudgets,
+    savingsGoals: savingsGoals,
   };
   const dataStr = JSON.stringify(exportObject, null, 2);
   const blob = new Blob([dataStr], { type: "application/json" });
@@ -2252,6 +2501,10 @@ function importDataJSON(event) {
             defaultBudgets = newBudgets;
             localStorage.setItem(BUDGETS_KEY, JSON.stringify(defaultBudgets));
           }
+          if (parsedData.savingsGoals && Array.isArray(parsedData.savingsGoals)) {
+            savingsGoals = parsedData.savingsGoals;
+            saveSavingsGoals();
+          }
 
           populateCategorySelects();
           updateAll();
@@ -2290,6 +2543,50 @@ function clearAllData() {
 }
 
 // ===== METAS DE ECONOMIA =====
+let currentSavingsGoalId = null;
+let isAddingToSavingsGoal = true;
+
+function openSavingsProgressModal(id, isAdd) {
+  currentSavingsGoalId = id;
+  isAddingToSavingsGoal = isAdd;
+  const modal = document.getElementById('modalSavingsProgressOverlay');
+  const title = document.getElementById('modalSavingsProgressTitle');
+  const amountInput = document.getElementById('modalSavingsProgressAmount');
+  
+  if (modal) {
+    title.innerHTML = isAdd ? '<i class="ri-add-line"></i> Adicionar à Meta' : '<i class="ri-subtract-line"></i> Retirar da Meta';
+    amountInput.value = '';
+    modal.classList.add('active');
+    setTimeout(() => amountInput.focus(), 100); // Focus input after animation
+  }
+}
+
+function closeSavingsProgressModal() {
+  const modal = document.getElementById('modalSavingsProgressOverlay');
+  if (modal) modal.classList.remove('active');
+  currentSavingsGoalId = null;
+}
+
+function saveSavingsProgress() {
+  if (!currentSavingsGoalId) return;
+  const amountInput = document.getElementById('modalSavingsProgressAmount');
+  if (!amountInput || !amountInput.value) {
+    showToast('Informe um valor válido.', 'error');
+    return;
+  }
+  
+  let val = parseFloat(amountInput.value);
+  if (isNaN(val) || val <= 0) {
+    showToast('O valor deve ser maior que zero.', 'error');
+    return;
+  }
+  
+  const v = isAddingToSavingsGoal ? val : -val;
+  updateSavingsGoalProgress(currentSavingsGoalId, v);
+  closeSavingsProgressModal();
+  showToast('Meta atualizada!', 'success');
+}
+
 function openSavingsGoalForm() {
   const form = document.getElementById('savingsGoalForm');
   if (form) form.style.display = 'block';
@@ -2326,6 +2623,7 @@ function addSavingsGoal() {
   saveSavingsGoals();
   closeSavingsGoalForm();
   renderSavingsGoals();
+  renderQuickSavingsGoals();
   showToast('Meta criada com sucesso!', 'success');
 }
 
@@ -2334,6 +2632,7 @@ function deleteSavingsGoal(id) {
     savingsGoals = savingsGoals.filter(g => g.id !== id);
     saveSavingsGoals();
     renderSavingsGoals();
+    renderQuickSavingsGoals();
     showToast('Meta removida.', 'info');
   });
 }
@@ -2345,6 +2644,7 @@ function updateSavingsGoalProgress(id, amount) {
   goal.currentAmount = newAmount;
   saveSavingsGoals();
   renderSavingsGoals();
+  renderQuickSavingsGoals();
 }
 
 function renderSavingsGoals() {
@@ -2406,15 +2706,88 @@ function renderSavingsGoals() {
     card.querySelector('.sg-name').textContent = goal.name;
 
     card.querySelector('.sg-delete').addEventListener('click', () => deleteSavingsGoal(goal.id));
-    card.querySelector('.sg-btn-add').addEventListener('click', () => {
-      const v = parseFloat(prompt('Quanto adicionar à meta? (R$)') || '0');
-      if (!isNaN(v) && v > 0) updateSavingsGoalProgress(goal.id, v);
-    });
-    card.querySelector('.sg-btn-withdraw').addEventListener('click', () => {
-      const v = parseFloat(prompt('Quanto retirar da meta? (R$)') || '0');
-      if (!isNaN(v) && v > 0) updateSavingsGoalProgress(goal.id, -v);
-    });
+    card.querySelector('.sg-btn-add').addEventListener('click', () => openSavingsProgressModal(goal.id, true));
+    card.querySelector('.sg-btn-withdraw').addEventListener('click', () => openSavingsProgressModal(goal.id, false));
 
     container.appendChild(card);
   });
+}
+
+// ===== Quick Savings Goals Widget (Dashboard) =====
+function renderQuickSavingsGoals() {
+  const container = document.getElementById('quickSavingsList');
+  if (!container) return;
+
+  if (savingsGoals.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:20px 24px;color:var(--text-muted);font-size:13px;">
+        <i class="ri-flag-2-line" style="font-size:28px;display:block;margin-bottom:8px;opacity:0.35;"></i>
+        Nenhuma meta criada ainda.
+        <button onclick="navigateTo('savings')" style="display:block;margin:8px auto 0;background:none;border:none;color:var(--accent-primary);cursor:pointer;font-weight:600;font-size:13px;padding:0;">
+          Criar primeira meta →
+        </button>
+      </div>`;
+    return;
+  }
+
+  // Mostra até 3 metas, priorizando as mais próximas de completar
+  const sorted = [...savingsGoals]
+    .sort((a, b) => (b.currentAmount / b.targetAmount) - (a.currentAmount / a.targetAmount))
+    .slice(0, 3);
+
+  let html = sorted.map(goal => {
+    const pct = Math.min(100, (goal.currentAmount / goal.targetAmount) * 100);
+    const isComplete = pct >= 100;
+    const remaining = Math.max(0, goal.targetAmount - goal.currentAmount);
+
+    // Cor da barra
+    const barColor = isComplete ? '#10b981' : pct >= 75 ? '#f59e0b' : 'var(--accent-primary)';
+
+    // Prazo
+    let deadlineHtml = '';
+    if (goal.targetDate) {
+      const daysLeft = Math.ceil((new Date(goal.targetDate + 'T00:00:00') - new Date()) / 86400000);
+      const dColor = daysLeft < 0 ? 'var(--color-expense)' : daysLeft <= 30 ? 'var(--color-warning)' : 'var(--color-income)';
+      const dLabel = daysLeft < 0 ? 'Vencida' : daysLeft === 0 ? 'Vence hoje!' : `${daysLeft}d`;
+      deadlineHtml = `<span style="font-size:10px;color:${dColor};font-weight:700;background:${dColor}18;padding:2px 6px;border-radius:4px;">⏰ ${dLabel}</span>`;
+    }
+
+    const completeBadge = isComplete
+      ? `<span style="font-size:10px;color:#10b981;font-weight:700;background:#10b98118;padding:2px 6px;border-radius:4px;"><i class="ri-checkbox-circle-fill"></i> Concluída</span>`
+      : '';
+
+    return `
+      <div style="padding:12px 20px;border-bottom:1px solid var(--border-light);display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <span style="font-size:13px;font-weight:600;color:var(--text-primary);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escapeHTML(goal.name)}">${escapeHTML(goal.name)}</span>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+            ${deadlineHtml}
+            ${completeBadge}
+            <span style="font-size:11px;color:var(--text-muted);">${formatCurrency(goal.currentAmount)} / ${formatCurrency(goal.targetAmount)}</span>
+            <div style="display:flex;gap:4px;margin-left:4px;">
+              <button onclick="openSavingsProgressModal(${goal.id}, true)" class="btn btn-secondary" style="padding:0;height:24px;width:24px;font-size:14px;border-radius:4px;color:var(--color-income);display:flex;align-items:center;justify-content:center;" title="Adicionar valor"><i class="ri-add-line"></i></button>
+              <button onclick="openSavingsProgressModal(${goal.id}, false)" class="btn btn-secondary" style="padding:0;height:24px;width:24px;font-size:14px;border-radius:4px;color:var(--color-expense);display:flex;align-items:center;justify-content:center;" title="Retirar valor"><i class="ri-subtract-line"></i></button>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="flex:1;height:6px;background:var(--border-color);border-radius:999px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:${barColor};border-radius:999px;transition:width 0.5s ease;"></div>
+          </div>
+          <span style="font-size:11px;color:var(--text-muted);min-width:36px;text-align:right;font-weight:600;">${pct.toFixed(0)}%</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Rodapé se houver mais metas
+  if (savingsGoals.length > 3) {
+    html += `
+      <div style="text-align:center;padding:10px;">
+        <button onclick="navigateTo('savings')" style="background:none;border:none;color:var(--accent-primary);cursor:pointer;font-size:12px;font-weight:600;">
+          Ver mais ${savingsGoals.length - 3} meta(s) →
+        </button>
+      </div>`;
+  }
+
+  container.innerHTML = html;
 }
